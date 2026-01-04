@@ -35,17 +35,17 @@ class UserService(UserServiceBase):
         user_id = str(uuid4())
         password_hash = hash_password(user_data.password)
 
-        try:
-            self._db._conn.execute(
-                """
-                INSERT INTO users (user_id, email, display_name, password_hash, is_admin)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (user_id, user_data.email, user_data.display_name, password_hash, user_data.is_admin),
-            )
-            self._db._conn.commit()
-        except sqlite3.IntegrityError as e:
-            raise ValueError(f"Failed to create user: {e}") from e
+        with self._db.transaction() as cursor:
+            try:
+                cursor.execute(
+                    """
+                    INSERT INTO users (user_id, email, display_name, password_hash, is_admin)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (user_id, user_data.email, user_data.display_name, password_hash, user_data.is_admin),
+                )
+            except sqlite3.IntegrityError as e:
+                raise ValueError(f"Failed to create user: {e}") from e
 
         user = self.get(user_id)
         if user is None:
@@ -54,15 +54,17 @@ class UserService(UserServiceBase):
 
     def get(self, user_id: str) -> UserDTO | None:
         """Get user by ID."""
-        cursor = self._db._conn.execute(
-            """
-            SELECT user_id, email, display_name, is_admin, is_active, created_at, updated_at, last_login_at
-            FROM users
-            WHERE user_id = ?
-            """,
-            (user_id,),
-        )
-        row = cursor.fetchone()
+        with self._db.transaction() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, email, display_name, is_admin, is_active, created_at, updated_at, last_login_at
+                FROM users
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+
         if row is None:
             return None
 
@@ -79,15 +81,17 @@ class UserService(UserServiceBase):
 
     def get_by_email(self, email: str) -> UserDTO | None:
         """Get user by email."""
-        cursor = self._db._conn.execute(
-            """
-            SELECT user_id, email, display_name, is_admin, is_active, created_at, updated_at, last_login_at
-            FROM users
-            WHERE email = ?
-            """,
-            (email,),
-        )
-        row = cursor.fetchone()
+        with self._db.transaction() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, email, display_name, is_admin, is_active, created_at, updated_at, last_login_at
+                FROM users
+                WHERE email = ?
+                """,
+                (email,),
+            )
+            row = cursor.fetchone()
+
         if row is None:
             return None
 
@@ -141,8 +145,8 @@ class UserService(UserServiceBase):
         params.append(user_id)
         query = f"UPDATE users SET {', '.join(updates)} WHERE user_id = ?"
 
-        self._db._conn.execute(query, params)
-        self._db._conn.commit()
+        with self._db.transaction() as cursor:
+            cursor.execute(query, params)
 
         updated_user = self.get(user_id)
         if updated_user is None:
@@ -155,20 +159,22 @@ class UserService(UserServiceBase):
         if user is None:
             raise ValueError(f"User {user_id} not found")
 
-        self._db._conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
-        self._db._conn.commit()
+        with self._db.transaction() as cursor:
+            cursor.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
 
     def authenticate(self, email: str, password: str) -> UserDTO | None:
         """Authenticate user credentials."""
-        cursor = self._db._conn.execute(
-            """
-            SELECT user_id, email, display_name, password_hash, is_admin, is_active, created_at, updated_at, last_login_at
-            FROM users
-            WHERE email = ?
-            """,
-            (email,),
-        )
-        row = cursor.fetchone()
+        with self._db.transaction() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, email, display_name, password_hash, is_admin, is_active, created_at, updated_at, last_login_at
+                FROM users
+                WHERE email = ?
+                """,
+                (email,),
+            )
+            row = cursor.fetchone()
+
         if row is None:
             return None
 
@@ -177,11 +183,11 @@ class UserService(UserServiceBase):
             return None
 
         # Update last login time
-        self._db._conn.execute(
-            "UPDATE users SET last_login_at = ? WHERE user_id = ?",
-            (datetime.now(timezone.utc).isoformat(), row[0]),
-        )
-        self._db._conn.commit()
+        with self._db.transaction() as cursor:
+            cursor.execute(
+                "UPDATE users SET last_login_at = ? WHERE user_id = ?",
+                (datetime.now(timezone.utc).isoformat(), row[0]),
+            )
 
         return UserDTO(
             user_id=row[0],
@@ -196,8 +202,9 @@ class UserService(UserServiceBase):
 
     def has_admin(self) -> bool:
         """Check if any admin user exists."""
-        cursor = self._db._conn.execute("SELECT COUNT(*) FROM users WHERE is_admin = TRUE AND is_active = TRUE")
-        row = cursor.fetchone()
+        with self._db.transaction() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM users WHERE is_admin = TRUE AND is_active = TRUE")
+            row = cursor.fetchone()
         count = row[0] if row else 0
         return bool(count > 0)
 
@@ -217,16 +224,17 @@ class UserService(UserServiceBase):
 
     def list_users(self, limit: int = 100, offset: int = 0) -> list[UserDTO]:
         """List all users."""
-        cursor = self._db._conn.execute(
-            """
-            SELECT user_id, email, display_name, is_admin, is_active, created_at, updated_at, last_login_at
-            FROM users
-            ORDER BY created_at DESC
-            LIMIT ? OFFSET ?
-            """,
-            (limit, offset),
-        )
-        rows = cursor.fetchall()
+        with self._db.transaction() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, email, display_name, is_admin, is_active, created_at, updated_at, last_login_at
+                FROM users
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                (limit, offset),
+            )
+            rows = cursor.fetchall()
 
         return [
             UserDTO(

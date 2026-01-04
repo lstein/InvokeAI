@@ -6,7 +6,13 @@ from typing import cast
 from jose import JWTError, jwt
 from pydantic import BaseModel
 
-# TODO: Move to config - this should be generated and stored securely
+# SECURITY WARNING: This is a placeholder secret key for development only.
+# In production, this MUST be:
+# 1. Generated using a cryptographically secure random generator
+# 2. Stored in environment variables or secure configuration
+# 3. Never committed to source control
+# 4. Rotated periodically
+# TODO: Move to config system - see invokeai.app.services.config.config_default
 SECRET_KEY = "your-secret-key-should-be-in-config-change-this-in-production"
 ALGORITHM = "HS256"
 DEFAULT_EXPIRATION_HOURS = 24
