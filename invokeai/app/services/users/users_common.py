@@ -23,7 +23,7 @@ class UserCreateRequest(BaseModel):
 
     email: EmailStr = Field(description="User email address")
     display_name: str | None = Field(default=None, description="Display name")
-    password: str = Field(description="User password", min_length=8)
+    password: str = Field(description="User password")
     is_admin: bool = Field(default=False, description="Whether user should have admin privileges")
 
 
@@ -31,6 +31,6 @@ class UserUpdateRequest(BaseModel):
     """Request to update a user."""
 
     display_name: str | None = Field(default=None, description="Display name")
-    password: str | None = Field(default=None, description="New password", min_length=8)
+    password: str | None = Field(default=None, description="New password")
     is_admin: bool | None = Field(default=None, description="Whether user should have admin privileges")
     is_active: bool | None = Field(default=None, description="Whether user account should be active")
