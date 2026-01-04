@@ -116,6 +116,11 @@ class Migration25Callback:
 
     def _update_boards_table(self, cursor: sqlite3.Cursor) -> None:
         """Add user_id and is_public columns to boards table."""
+        # Check if boards table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='boards';")
+        if cursor.fetchone() is None:
+            return
+
         # Check if user_id column exists
         cursor.execute("PRAGMA table_info(boards);")
         columns = [row[1] for row in cursor.fetchall()]
@@ -130,6 +135,11 @@ class Migration25Callback:
 
     def _update_images_table(self, cursor: sqlite3.Cursor) -> None:
         """Add user_id column to images table."""
+        # Check if images table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='images';")
+        if cursor.fetchone() is None:
+            return
+
         cursor.execute("PRAGMA table_info(images);")
         columns = [row[1] for row in cursor.fetchall()]
 
@@ -139,6 +149,11 @@ class Migration25Callback:
 
     def _update_workflows_table(self, cursor: sqlite3.Cursor) -> None:
         """Add user_id and is_public columns to workflows table."""
+        # Check if workflows table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='workflows';")
+        if cursor.fetchone() is None:
+            return
+
         cursor.execute("PRAGMA table_info(workflows);")
         columns = [row[1] for row in cursor.fetchall()]
 
@@ -152,6 +167,11 @@ class Migration25Callback:
 
     def _update_session_queue_table(self, cursor: sqlite3.Cursor) -> None:
         """Add user_id column to session_queue table."""
+        # Check if session_queue table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='session_queue';")
+        if cursor.fetchone() is None:
+            return
+
         cursor.execute("PRAGMA table_info(session_queue);")
         columns = [row[1] for row in cursor.fetchall()]
 
