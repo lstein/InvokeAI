@@ -4,7 +4,13 @@ from typing import cast
 
 from passlib.context import CryptContext
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Configure bcrypt context - relax_truncate_checks allows passwords >72 bytes without error
+# They will be automatically truncated by bcrypt to 72 bytes
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__relax_truncate_checks=True,
+)
 
 
 def hash_password(password: str) -> str:
