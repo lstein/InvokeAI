@@ -2,8 +2,6 @@
 
 from datetime import timedelta
 
-import pytest
-
 from invokeai.app.services.auth.token_service import TokenData, create_access_token, verify_token
 
 

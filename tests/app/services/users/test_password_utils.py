@@ -1,7 +1,5 @@
 """Tests for password utilities."""
 
-import pytest
-
 from invokeai.app.services.auth.password_utils import hash_password, validate_password_strength, verify_password
 
 

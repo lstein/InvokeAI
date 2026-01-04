@@ -164,9 +164,9 @@ def test_graph_executes_depth_first():
 
         # 1) coverage: all exec nodes ran, and no duplicates
         pos = {nid: i for i, nid in enumerate(order)}
-        assert set(pos.keys()) == exec_nodes, (
-            f"Executed {len(pos)} of {len(exec_nodes)} nodes. Missing: {sorted(exec_nodes - set(pos))[:10]}"
-        )
+        assert (
+            set(pos.keys()) == exec_nodes
+        ), f"Executed {len(pos)} of {len(exec_nodes)} nodes. Missing: {sorted(exec_nodes - set(pos))[:10]}"
         assert len(pos) == len(order), "Duplicate execution detected"
 
         # 2) topo order: parents before children

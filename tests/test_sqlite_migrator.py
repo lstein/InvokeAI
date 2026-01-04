@@ -358,4 +358,3 @@ def test_migration_25_creates_users_table(logger: Logger) -> None:
     assert "is_public" in columns
 
     db._conn.close()
-

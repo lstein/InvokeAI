@@ -173,9 +173,9 @@ def run_session_with_mock_context(session: GraphExecutionState):
 
 
 def get_single_output_from_session(session: GraphExecutionState, node_id: str) -> BaseInvocationOutput:
-    assert len(session.source_prepared_mapping[node_id]) == 1, (
-        "Expected exactly one prepared node for the given node_id"
-    )
+    assert (
+        len(session.source_prepared_mapping[node_id]) == 1
+    ), "Expected exactly one prepared node for the given node_id"
     prepared_node_id = session.source_prepared_mapping[node_id].pop()
     output = session.results[prepared_node_id]
     assert isinstance(output, BaseInvocationOutput), "Expected output to be of type BaseInvocationOutput"
