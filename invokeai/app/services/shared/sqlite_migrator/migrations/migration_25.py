@@ -181,7 +181,7 @@ class Migration25Callback:
         """Create system user for backward compatibility."""
         cursor.execute("""
             INSERT OR IGNORE INTO users (user_id, email, display_name, password_hash, is_admin, is_active)
-            VALUES ('system', 'system@invokeai.local', 'System', '', TRUE, TRUE);
+            VALUES ('system', 'system@system.invokeai', 'System', '', TRUE, TRUE);
         """)
 
 
