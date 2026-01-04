@@ -20,7 +20,7 @@ def db(logger: Logger) -> SqliteDatabase:
     """Create an in-memory database for testing."""
     db = SqliteDatabase(db_path=None, logger=logger, verbose=False)
     # Create users table manually for testing
-    db.conn.execute("""
+    db._conn.execute("""
         CREATE TABLE users (
             user_id TEXT NOT NULL PRIMARY KEY,
             email TEXT NOT NULL UNIQUE,
@@ -33,7 +33,7 @@ def db(logger: Logger) -> SqliteDatabase:
             last_login_at DATETIME
         );
     """)
-    db.conn.commit()
+    db._conn.commit()
     return db
 
 

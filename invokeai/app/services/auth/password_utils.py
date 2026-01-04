@@ -11,7 +11,7 @@ def hash_password(password: str) -> str:
     """Hash a password using bcrypt.
 
     bcrypt has a maximum password length of 72 bytes. Longer passwords
-    are truncated to ensure compatibility.
+    are automatically truncated to comply with this limit.
 
     Args:
         password: The plain text password to hash
@@ -19,11 +19,11 @@ def hash_password(password: str) -> str:
     Returns:
         The hashed password
     """
-    # bcrypt has a 72 byte limit, truncate if necessary
+    # bcrypt has a 72 byte limit - encode and truncate if necessary
     password_bytes = password.encode("utf-8")
     if len(password_bytes) > 72:
-        password_bytes = password_bytes[:72]
-        password = password_bytes.decode("utf-8", errors="ignore")
+        # Truncate to 72 bytes and decode back, dropping incomplete UTF-8 sequences
+        password = password_bytes[:72].decode("utf-8", errors="ignore")
     return cast(str, pwd_context.hash(password))
 
 
@@ -31,7 +31,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash.
 
     bcrypt has a maximum password length of 72 bytes. Longer passwords
-    are truncated to match the behavior of hash_password.
+    are automatically truncated to match hash_password behavior.
 
     Args:
         plain_password: The plain text password to verify
@@ -40,11 +40,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if the password matches the hash, False otherwise
     """
-    # bcrypt has a 72 byte limit, truncate if necessary to match hash_password behavior
+    # bcrypt has a 72 byte limit - encode and truncate if necessary to match hash_password
     password_bytes = plain_password.encode("utf-8")
     if len(password_bytes) > 72:
-        password_bytes = password_bytes[:72]
-        plain_password = password_bytes.decode("utf-8", errors="ignore")
+        # Truncate to 72 bytes and decode back, dropping incomplete UTF-8 sequences
+        plain_password = password_bytes[:72].decode("utf-8", errors="ignore")
     return cast(bool, pwd_context.verify(plain_password, hashed_password))
 
 
