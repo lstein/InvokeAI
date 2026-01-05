@@ -19,8 +19,11 @@ class TestZImageWorkingMemory:
         """Test that ZImageLatentsToImageInvocation estimates and requests working memory."""
         # Create mock VAE
         mock_vae = MagicMock(spec=vae_type)
-        mock_vae.config.scaling_factor = 1.0
-        mock_vae.config.shift_factor = None
+        
+        # Only set config for AutoencoderKL (FluxAutoEncoder doesn't use config)
+        if vae_type == AutoencoderKL:
+            mock_vae.config.scaling_factor = 1.0
+            mock_vae.config.shift_factor = None
 
         # Create mock parameter for dtype detection
         mock_param = torch.zeros(1)
@@ -86,8 +89,11 @@ class TestZImageWorkingMemory:
         """Test that ZImageImageToLatentsInvocation estimates and requests working memory."""
         # Create mock VAE
         mock_vae = MagicMock(spec=vae_type)
-        mock_vae.config.scaling_factor = 1.0
-        mock_vae.config.shift_factor = None
+        
+        # Only set config for AutoencoderKL (FluxAutoEncoder doesn't use config)
+        if vae_type == AutoencoderKL:
+            mock_vae.config.scaling_factor = 1.0
+            mock_vae.config.shift_factor = None
 
         # Create mock parameter for dtype detection
         mock_param = torch.zeros(1)
