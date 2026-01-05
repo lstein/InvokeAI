@@ -65,6 +65,7 @@ dependencies = [
 
   # Auxiliary dependencies, pinned only if necessary.
   "blake3",
+  "bcrypt<4.0.0",
   "Deprecated",
   "dnspython",
   "dynamicprompts",
