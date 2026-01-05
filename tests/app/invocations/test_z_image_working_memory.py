@@ -7,7 +7,6 @@ import torch
 from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 
 from invokeai.app.invocations.z_image_image_to_latents import ZImageImageToLatentsInvocation
-from invokeai.app.invocations.z_image_latents_to_image import ZImageLatentsToImageInvocation
 from invokeai.backend.flux.modules.autoencoder import AutoEncoder as FluxAutoEncoder
 
 
@@ -19,7 +18,7 @@ class TestZImageWorkingMemory:
         """Test that ZImageLatentsToImageInvocation estimates and requests working memory."""
         # Create mock VAE
         mock_vae = MagicMock(spec=vae_type)
-        
+
         # Only set config for AutoencoderKL (FluxAutoEncoder doesn't use config)
         if vae_type == AutoencoderKL:
             mock_vae.config.scaling_factor = 1.0
@@ -69,7 +68,7 @@ class TestZImageWorkingMemory:
 
             # Import and create invocation using model_construct to bypass validation
             from invokeai.app.invocations.z_image_latents_to_image import ZImageLatentsToImageInvocation
-            
+
             invocation = ZImageLatentsToImageInvocation.model_construct(
                 latents=MagicMock(latents_name="test_latents"),
                 vae=MagicMock(vae=MagicMock(), seamless_axes=["x", "y"]),
@@ -91,7 +90,7 @@ class TestZImageWorkingMemory:
         """Test that ZImageImageToLatentsInvocation estimates and requests working memory."""
         # Create mock VAE
         mock_vae = MagicMock(spec=vae_type)
-        
+
         # Only set config for AutoencoderKL (FluxAutoEncoder doesn't use config)
         if vae_type == AutoencoderKL:
             mock_vae.config.scaling_factor = 1.0
