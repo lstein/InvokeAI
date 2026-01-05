@@ -67,10 +67,12 @@ class TestZImageWorkingMemory:
             mock_image_dto = MagicMock()
             mock_context.images.save.return_value = mock_image_dto
 
-            # Create and invoke
-            invocation = ZImageLatentsToImageInvocation(
+            # Import and create invocation using model_construct to bypass validation
+            from invokeai.app.invocations.z_image_latents_to_image import ZImageLatentsToImageInvocation
+            
+            invocation = ZImageLatentsToImageInvocation.model_construct(
                 latents=MagicMock(latents_name="test_latents"),
-                vae=MagicMock(vae=MagicMock(), seamless_axes=MagicMock()),
+                vae=MagicMock(vae=MagicMock(), seamless_axes=["x", "y"]),
             )
 
             try:
