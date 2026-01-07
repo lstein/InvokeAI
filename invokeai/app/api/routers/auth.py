@@ -13,6 +13,10 @@ from invokeai.app.services.users.users_common import UserCreateRequest, UserDTO
 
 auth_router = APIRouter(prefix="/v1/auth", tags=["authentication"])
 
+# Token expiration constants (in days)
+TOKEN_EXPIRATION_NORMAL = 1  # 1 day for normal login
+TOKEN_EXPIRATION_REMEMBER_ME = 7  # 7 days for "remember me" login
+
 
 class LoginRequest(BaseModel):
     """Request body for user login."""
@@ -80,7 +84,7 @@ async def login(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is disabled")
 
     # Create token with appropriate expiration
-    expires_delta = timedelta(days=7 if request.remember_me else 1)
+    expires_delta = timedelta(days=TOKEN_EXPIRATION_REMEMBER_ME if request.remember_me else TOKEN_EXPIRATION_NORMAL)
     token_data = TokenData(
         user_id=user.user_id,
         email=user.email,
@@ -101,8 +105,12 @@ async def logout(
 ) -> LogoutResponse:
     """Logout current user.
 
-    Currently a no-op since we use stateless JWT tokens. In the future, this could
-    be used to invalidate tokens in a server-side session store.
+    Currently a no-op since we use stateless JWT tokens. For token invalidation in
+    future implementations, consider:
+    - Token blacklist: Store invalidated tokens in Redis/database with expiration
+    - Token versioning: Add version field to user record, increment on logout
+    - Short-lived tokens: Use refresh token pattern with token rotation
+    - Session storage: Track active sessions server-side for revocation
 
     Args:
         current_user: The authenticated user (validates token)
@@ -110,7 +118,7 @@ async def logout(
     Returns:
         LogoutResponse indicating success
     """
-    # TODO: Implement token invalidation if using server-side sessions
+    # TODO: Implement token invalidation when server-side session management is added
     # For now, this is a no-op since we use stateless JWT tokens
     return LogoutResponse(success=True)
 

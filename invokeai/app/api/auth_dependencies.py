@@ -17,6 +17,10 @@ async def get_current_user(
 ) -> TokenData:
     """Get current authenticated user from Bearer token.
 
+    Note: This function accesses ApiDependencies.invoker.services.users directly,
+    which is the established pattern in this codebase. The ApiDependencies.invoker
+    is initialized in the FastAPI lifespan context before any requests are handled.
+
     Args:
         credentials: The HTTP authorization credentials containing the Bearer token
 
