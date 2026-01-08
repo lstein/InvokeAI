@@ -48,9 +48,10 @@ async def create_board(
 
 @boards_router.get("/{board_id}", operation_id="get_board", response_model=BoardDTO)
 async def get_board(
+    current_user: CurrentUser,
     board_id: str = Path(description="The id of board to get"),
 ) -> BoardDTO:
-    """Gets a board"""
+    """Gets a board (user must have access to it)"""
 
     try:
         result = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
@@ -71,10 +72,11 @@ async def get_board(
     response_model=BoardDTO,
 )
 async def update_board(
+    current_user: CurrentUser,
     board_id: str = Path(description="The id of board to update"),
     changes: BoardChanges = Body(description="The changes to apply to the board"),
 ) -> BoardDTO:
-    """Updates a board"""
+    """Updates a board (user must have access to it)"""
     try:
         result = ApiDependencies.invoker.services.boards.update(board_id=board_id, changes=changes)
         return result
@@ -84,10 +86,11 @@ async def update_board(
 
 @boards_router.delete("/{board_id}", operation_id="delete_board", response_model=DeleteBoardResult)
 async def delete_board(
+    current_user: CurrentUser,
     board_id: str = Path(description="The id of board to delete"),
     include_images: Optional[bool] = Query(description="Permanently delete all images on the board", default=False),
 ) -> DeleteBoardResult:
-    """Deletes a board"""
+    """Deletes a board (user must have access to it)"""
     try:
         if include_images is True:
             deleted_images = ApiDependencies.invoker.services.board_images.get_all_board_image_names_for_board(
