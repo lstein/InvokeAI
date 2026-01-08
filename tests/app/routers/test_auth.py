@@ -42,9 +42,7 @@ def setup_test_user(mock_invoker: Invoker, email: str = "test@example.com", pass
     return user.user_id
 
 
-def setup_test_admin(
-    mock_invoker: Invoker, email: str = "admin@example.com", password: str = "AdminPass123"
-) -> str:
+def setup_test_admin(mock_invoker: Invoker, email: str = "admin@example.com", password: str = "AdminPass123") -> str:
     """Helper to create a test admin user and return user_id."""
     user_service = mock_invoker.services.users
     user_data = UserCreateRequest(
