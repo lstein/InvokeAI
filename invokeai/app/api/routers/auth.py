@@ -4,12 +4,12 @@ from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Body, HTTPException, status
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, field_validator
 
 from invokeai.app.api.auth_dependencies import CurrentUser
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.services.auth.token_service import TokenData, create_access_token
-from invokeai.app.services.users.users_common import UserCreateRequest, UserDTO
+from invokeai.app.services.users.users_common import UserCreateRequest, UserDTO, validate_email_with_special_domains
 
 auth_router = APIRouter(prefix="/v1/auth", tags=["authentication"])
 
@@ -21,9 +21,15 @@ TOKEN_EXPIRATION_REMEMBER_ME = 7  # 7 days for "remember me" login
 class LoginRequest(BaseModel):
     """Request body for user login."""
 
-    email: EmailStr = Field(description="User email address")
+    email: str = Field(description="User email address")
     password: str = Field(description="User password")
     remember_me: bool = Field(default=False, description="Whether to extend session duration")
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Validate email address, allowing special-use domains."""
+        return validate_email_with_special_domains(v)
 
 
 class LoginResponse(BaseModel):
@@ -37,9 +43,15 @@ class LoginResponse(BaseModel):
 class SetupRequest(BaseModel):
     """Request body for initial admin setup."""
 
-    email: EmailStr = Field(description="Admin email address")
+    email: str = Field(description="Admin email address")
     display_name: str | None = Field(default=None, description="Admin display name")
     password: str = Field(description="Admin password")
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Validate email address, allowing special-use domains."""
+        return validate_email_with_special_domains(v)
 
 
 class SetupResponse(BaseModel):
