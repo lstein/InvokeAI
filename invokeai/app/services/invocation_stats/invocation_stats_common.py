@@ -58,10 +58,10 @@ class InvocationStatsSummary:
     def __str__(self) -> str:
         _str = ""
         _str = f"Graph stats: {self.graph_stats.graph_execution_state_id}\n"
-        _str += f"{'Node':>30} {'Calls':>7} {'Seconds':>9} {'VRAM Used':>10}\n"
+        _str += f"{'Node':>30} {'Calls':>7} {'Seconds':>9} {'VRAM Change':+>10}\n"
 
         for summary in self.node_stats:
-            _str += f"{summary.node_type:>30} {summary.num_calls:>7} {summary.time_used_seconds:>8.3f}s {summary.peak_vram_gb:>9.3f}G\n"
+            _str += f"{summary.node_type:>30} {summary.num_calls:>7} {summary.time_used_seconds:>8.3f}s {summary.peak_vram_gb:+10.3f}G\n"
 
         _str += f"TOTAL GRAPH EXECUTION TIME: {self.graph_stats.execution_time_seconds:7.3f}s\n"
 
