@@ -38,9 +38,7 @@ async def create_board(
 ) -> BoardDTO:
     """Creates a board for the current user"""
     try:
-        result = ApiDependencies.invoker.services.boards.create(
-            board_name=board_name, user_id=current_user.user_id
-        )
+        result = ApiDependencies.invoker.services.boards.create(board_name=board_name, user_id=current_user.user_id)
         return result
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to create board")

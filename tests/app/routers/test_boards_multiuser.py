@@ -1,10 +1,15 @@
 """Tests for multiuser boards functionality."""
 
+from typing import Any
+
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
+from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.api_app import app
+from invokeai.app.services.invoker import Invoker
+from invokeai.app.services.users.users_common import UserCreateRequest
 
 
 @pytest.fixture
@@ -13,33 +18,54 @@ def client():
     return TestClient(app)
 
 
+class MockApiDependencies(ApiDependencies):
+    """Mock API dependencies for testing."""
+
+    invoker: Invoker
+
+    def __init__(self, invoker: Invoker) -> None:
+        self.invoker = invoker
+
+
+def setup_test_admin(mock_invoker: Invoker, email: str = "admin@test.com", password: str = "TestPass123") -> str:
+    """Helper to create a test admin user and return user_id."""
+    user_service = mock_invoker.services.users
+    user_data = UserCreateRequest(
+        email=email,
+        display_name="Test Admin",
+        password=password,
+        is_admin=True,
+    )
+    user = user_service.create(user_data)
+    return user.user_id
+
+
 @pytest.fixture
-def admin_token(client):
+def admin_token(monkeypatch: Any, mock_invoker: Invoker, client: TestClient):
     """Get an admin token for testing."""
-    # First setup an admin user
+    # Mock ApiDependencies for both auth and boards routers
+    monkeypatch.setattr("invokeai.app.api.routers.auth.ApiDependencies", MockApiDependencies(mock_invoker))
+    monkeypatch.setattr("invokeai.app.api.auth_dependencies.ApiDependencies", MockApiDependencies(mock_invoker))
+    monkeypatch.setattr("invokeai.app.api.routers.boards.ApiDependencies", MockApiDependencies(mock_invoker))
+
+    # Create admin user
+    setup_test_admin(mock_invoker, "admin@test.com", "TestPass123")
+
+    # Login to get token
     response = client.post(
-        "/api/v1/auth/setup",
+        "/api/v1/auth/login",
         json={
             "email": "admin@test.com",
-            "display_name": "Test Admin",
             "password": "TestPass123",
+            "remember_me": False,
         },
     )
-    if response.status_code == 400:
-        # Admin already exists, try to login
-        response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "email": "admin@test.com",
-                "password": "TestPass123",
-            },
-        )
     assert response.status_code == 200
     return response.json()["token"]
 
 
 @pytest.fixture
-def user1_token(client, admin_token):
+def user1_token(admin_token):
     """Get a token for test user 1."""
     # For now, we'll reuse admin token since user creation requires admin
     # In a full implementation, we'd create a separate user
@@ -58,7 +84,7 @@ def test_list_boards_requires_auth(client):
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
-def test_create_board_with_auth(client, admin_token):
+def test_create_board_with_auth(client: TestClient, admin_token: str):
     """Test that authenticated users can create boards."""
     response = client.post(
         "/api/v1/boards/?board_name=My+Test+Board",
@@ -70,7 +96,7 @@ def test_create_board_with_auth(client, admin_token):
     assert "board_id" in data
 
 
-def test_list_boards_with_auth(client, admin_token):
+def test_list_boards_with_auth(client: TestClient, admin_token: str):
     """Test that authenticated users can list their boards."""
     # First create a board
     client.post(
@@ -91,7 +117,7 @@ def test_list_boards_with_auth(client, admin_token):
     assert "Listed Board" in board_names
 
 
-def test_user_boards_are_isolated(client, admin_token, user1_token):
+def test_user_boards_are_isolated(client: TestClient, admin_token: str, user1_token: str):
     """Test that boards are isolated between users."""
     # Admin creates a board
     admin_response = client.post(
