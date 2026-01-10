@@ -10,7 +10,6 @@ from fastapi.responses import FileResponse
 from PIL import Image
 from pydantic import BaseModel, Field
 
-from invokeai.app.api.auth_dependencies import CurrentUser
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.api.routers.model_manager import IMAGE_MAX_AGE
 from invokeai.app.services.style_preset_images.style_preset_images_common import StylePresetImageFileNotFoundException

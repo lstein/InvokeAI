@@ -6,7 +6,6 @@ from fastapi import APIRouter, Body, File, HTTPException, Path, Query, UploadFil
 from fastapi.responses import FileResponse
 from PIL import Image
 
-from invokeai.app.api.auth_dependencies import CurrentUser
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.services.shared.pagination import PaginatedResults
 from invokeai.app.services.shared.sqlite.sqlite_common import SQLiteDirection
