@@ -1,6 +1,6 @@
 import { Center, Spinner } from '@invoke-ai/ui-library';
-import { useAppSelector } from 'app/store/storeHooks';
 import type { RootState } from 'app/store/store';
+import { useAppSelector } from 'app/store/storeHooks';
 import type { PropsWithChildren } from 'react';
 import { memo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

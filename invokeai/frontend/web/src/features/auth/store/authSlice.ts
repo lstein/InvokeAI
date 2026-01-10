@@ -69,4 +69,3 @@ export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.
 export const selectCurrentUser = (state: { auth: AuthState }) => state.auth.user;
 export const selectAuthToken = (state: { auth: AuthState }) => state.auth.token;
 export const selectIsAuthLoading = (state: { auth: AuthState }) => state.auth.isLoading;
-

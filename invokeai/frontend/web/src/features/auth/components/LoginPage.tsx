@@ -14,6 +14,7 @@ import {
 } from '@invoke-ai/ui-library';
 import { useAppDispatch } from 'app/store/storeHooks';
 import { setCredentials } from 'features/auth/store/authSlice';
+import type { ChangeEvent, FormEvent } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useLoginMutation } from 'services/api/endpoints/auth';
 
@@ -25,7 +26,7 @@ export const LoginPage = memo(() => {
   const dispatch = useAppDispatch();
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
       try {
         const result = await login({ email, password, remember_me: rememberMe }).unwrap();
@@ -38,26 +39,34 @@ export const LoginPage = memo(() => {
           is_active: result.user.is_active || true,
         };
         dispatch(setCredentials({ token: result.token, user }));
-      } catch (err) {
+      } catch {
         // Error is handled by RTK Query and displayed via error state
-        console.error('Login failed:', err);
       }
     },
     [email, password, rememberMe, login, dispatch]
   );
 
-  const errorMessage = error ? ('data' in error && typeof error.data === 'object' && error.data && 'detail' in error.data ? String(error.data.detail) : 'Login failed. Please check your credentials.') : null;
+  const handleEmailChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  }, []);
+
+  const handlePasswordChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleRememberMeChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setRememberMe(e.target.checked);
+  }, []);
+
+  const errorMessage = error
+    ? 'data' in error && typeof error.data === 'object' && error.data && 'detail' in error.data
+      ? String(error.data.detail)
+      : 'Login failed. Please check your credentials.'
+    : null;
 
   return (
     <Center w="100dvw" h="100dvh" bg="base.900">
-      <Box
-        w="full"
-        maxW="400px"
-        p={8}
-        borderRadius="lg"
-        bg="base.800"
-        boxShadow="dark-lg"
-      >
+      <Box w="full" maxW="400px" p={8} borderRadius="lg" bg="base.800" boxShadow="dark-lg">
         <form onSubmit={handleSubmit}>
           <VStack spacing={6} align="stretch">
             <Heading size="lg" textAlign="center">
@@ -69,7 +78,7 @@ export const LoginPage = memo(() => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder="Email"
                 autoComplete="email"
                 autoFocus
@@ -81,19 +90,14 @@ export const LoginPage = memo(() => {
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 placeholder="Password"
                 autoComplete="current-password"
               />
-              {errorMessage && (
-                <FormErrorMessage>{errorMessage}</FormErrorMessage>
-              )}
+              {errorMessage && <FormErrorMessage>{errorMessage}</FormErrorMessage>}
             </FormControl>
 
-            <Checkbox
-              isChecked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            >
+            <Checkbox isChecked={rememberMe} onChange={handleRememberMeChange}>
               Remember me for 7 days
             </Checkbox>
 
@@ -109,14 +113,7 @@ export const LoginPage = memo(() => {
             </Button>
 
             {errorMessage && (
-              <Flex
-                p={3}
-                borderRadius="md"
-                bg="error.500"
-                color="white"
-                fontSize="sm"
-                justifyContent="center"
-              >
+              <Flex p={3} borderRadius="md" bg="error.500" color="white" fontSize="sm" justifyContent="center">
                 <Text fontWeight="semibold">{errorMessage}</Text>
               </Flex>
             )}

@@ -12,8 +12,7 @@ import {
   Text,
   VStack,
 } from '@invoke-ai/ui-library';
-import { useAppDispatch } from 'app/store/storeHooks';
-import { setCredentials } from 'features/auth/store/authSlice';
+import type { ChangeEvent, FormEvent } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useSetupMutation } from 'services/api/endpoints/auth';
 
@@ -42,13 +41,12 @@ export const AdministratorSetup = memo(() => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [setup, { isLoading, error }] = useSetupMutation();
-  const dispatch = useAppDispatch();
 
   const passwordValidation = validatePasswordStrength(password);
   const passwordsMatch = password === confirmPassword;
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
 
       if (!passwordValidation.isValid) {
@@ -66,12 +64,28 @@ export const AdministratorSetup = memo(() => {
           // For now, just redirect to login page
           window.location.href = '/login';
         }
-      } catch (err) {
-        console.error('Setup failed:', err);
+      } catch {
+        // Error is handled by RTK Query and displayed via error state
       }
     },
     [email, displayName, password, passwordValidation.isValid, passwordsMatch, setup]
   );
+
+  const handleEmailChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  }, []);
+
+  const handleDisplayNameChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setDisplayName(e.target.value);
+  }, []);
+
+  const handlePasswordChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  }, []);
+
+  const handleConfirmPasswordChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setConfirmPassword(e.target.value);
+  }, []);
 
   const errorMessage = error
     ? 'data' in error && typeof error.data === 'object' && error.data && 'detail' in error.data
@@ -98,7 +112,7 @@ export const AdministratorSetup = memo(() => {
               <Input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder="admin@example.com"
                 autoComplete="email"
                 autoFocus
@@ -108,12 +122,7 @@ export const AdministratorSetup = memo(() => {
 
             <FormControl isRequired>
               <FormLabel>Display Name</FormLabel>
-              <Input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Administrator"
-              />
+              <Input type="text" value={displayName} onChange={handleDisplayNameChange} placeholder="Administrator" />
               <FormHelperText>Your name as it will appear in the application</FormHelperText>
             </FormControl>
 
@@ -122,7 +131,7 @@ export const AdministratorSetup = memo(() => {
               <Input
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 placeholder="Password"
                 autoComplete="new-password"
               />
@@ -130,9 +139,7 @@ export const AdministratorSetup = memo(() => {
                 <FormErrorMessage>{passwordValidation.message}</FormErrorMessage>
               )}
               {password.length === 0 && (
-                <FormHelperText>
-                  Must be at least 8 characters with uppercase, lowercase, and numbers
-                </FormHelperText>
+                <FormHelperText>Must be at least 8 characters with uppercase, lowercase, and numbers</FormHelperText>
               )}
             </FormControl>
 
@@ -141,7 +148,7 @@ export const AdministratorSetup = memo(() => {
               <Input
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={handleConfirmPasswordChange}
                 placeholder="Confirm Password"
                 autoComplete="new-password"
               />

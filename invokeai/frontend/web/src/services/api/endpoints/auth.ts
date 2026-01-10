@@ -1,5 +1,5 @@
-import type { components } from 'services/api/schema';
 import { api } from 'services/api';
+import type { components } from 'services/api/schema';
 
 type LoginRequest = {
   email: string;
