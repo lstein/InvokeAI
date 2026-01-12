@@ -35,7 +35,7 @@ const MainApp = () => {
 const SetupChecker = () => {
   const { data, isLoading } = useGetSetupStatusQuery();
   const navigate = useNavigate();
-  
+
   // Check if user is already authenticated
   const token = localStorage.getItem('auth_token');
   const isAuthenticated = !!token;
