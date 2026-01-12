@@ -3,8 +3,6 @@
 import time
 from datetime import timedelta
 
-import pytest
-
 from invokeai.app.services.auth.token_service import TokenData, create_access_token, verify_token
 
 
@@ -79,10 +77,9 @@ class TestTokenCreation:
             is_admin=False,
         )
 
-        token1 = create_access_token(token_data)
-        # Wait a tiny bit to ensure different timestamp
-        time.sleep(0.001)
-        token2 = create_access_token(token_data)
+        # Create tokens with different expiration times to ensure uniqueness
+        token1 = create_access_token(token_data, expires_delta=timedelta(hours=1))
+        token2 = create_access_token(token_data, expires_delta=timedelta(hours=2))
 
         # Tokens should be different due to different exp timestamps
         assert token1 != token2
@@ -134,11 +131,11 @@ class TestTokenVerification:
             is_admin=False,
         )
 
-        # Create token that expires in 1 microsecond
-        token = create_access_token(token_data, expires_delta=timedelta(microseconds=1))
+        # Create token that expires in 100 milliseconds (0.1 seconds)
+        token = create_access_token(token_data, expires_delta=timedelta(milliseconds=100))
 
-        # Wait for token to expire
-        time.sleep(0.001)
+        # Wait for token to expire (wait longer than expiration - 200ms to be safe)
+        time.sleep(0.2)
 
         # Token should be invalid now
         verified_data = verify_token(token)

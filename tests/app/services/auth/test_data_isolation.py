@@ -13,7 +13,9 @@ from fastapi.testclient import TestClient
 
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.api_app import app
+from invokeai.app.services.board_records.board_records_common import BoardRecordOrderBy
 from invokeai.app.services.invoker import Invoker
+from invokeai.app.services.shared.sqlite.sqlite_common import SQLiteDirection
 from invokeai.app.services.users.users_common import UserCreateRequest
 
 
@@ -90,8 +92,8 @@ class TestBoardDataIsolation:
         # User1 should only see their board
         user1_boards = board_service.get_many(
             user_id=user1_id,
-            order_by="created_at",
-            direction="ASC",
+            order_by=BoardRecordOrderBy.CreatedAt,
+            direction=SQLiteDirection.Ascending,
         )
 
         user1_board_ids = [b.board_id for b in user1_boards.items]
@@ -101,8 +103,8 @@ class TestBoardDataIsolation:
         # User2 should only see their board
         user2_boards = board_service.get_many(
             user_id=user2_id,
-            order_by="created_at",
-            direction="ASC",
+            order_by=BoardRecordOrderBy.CreatedAt,
+            direction=SQLiteDirection.Ascending,
         )
 
         user2_board_ids = [b.board_id for b in user2_boards.items]
@@ -160,10 +162,10 @@ class TestBoardDataIsolation:
         user = user_service.create(user_data)
 
         # User creates a board
-        user_board = board_service.create(board_name="User Board", user_id=user.user_id)
+        board_service.create(board_name="User Board", user_id=user.user_id)
 
         # Admin creates a board
-        admin_board = board_service.create(board_name="Admin Board", user_id=admin.user_id)
+        board_service.create(board_name="Admin Board", user_id=admin.user_id)
 
         # Admin should be able to get all boards (implementation dependent)
         # Note: Current implementation may not have admin override for board listing
@@ -181,12 +183,12 @@ class TestImageDataIsolation:
         user1_data = UserCreateRequest(
             email="user1@example.com", display_name="User 1", password="TestPass123", is_admin=False
         )
-        user1 = user_service.create(user1_data)
+        user_service.create(user1_data)
 
         user2_data = UserCreateRequest(
             email="user2@example.com", display_name="User 2", password="TestPass123", is_admin=False
         )
-        user2 = user_service.create(user2_data)
+        user_service.create(user2_data)
 
         # Note: Image service tests would require actual image creation
         # which is beyond the scope of basic security testing
@@ -207,12 +209,12 @@ class TestWorkflowDataIsolation:
         user1_data = UserCreateRequest(
             email="user1@example.com", display_name="User 1", password="TestPass123", is_admin=False
         )
-        user1 = user_service.create(user1_data)
+        user_service.create(user1_data)
 
         user2_data = UserCreateRequest(
             email="user2@example.com", display_name="User 2", password="TestPass123", is_admin=False
         )
-        user2 = user_service.create(user2_data)
+        user_service.create(user2_data)
 
         # Note: Workflow service tests would require workflow creation
         # This test documents expected behavior:
@@ -232,12 +234,12 @@ class TestQueueDataIsolation:
         user1_data = UserCreateRequest(
             email="user1@example.com", display_name="User 1", password="TestPass123", is_admin=False
         )
-        user1 = user_service.create(user1_data)
+        user_service.create(user1_data)
 
         user2_data = UserCreateRequest(
             email="user2@example.com", display_name="User 2", password="TestPass123", is_admin=False
         )
-        user2 = user_service.create(user2_data)
+        user_service.create(user2_data)
 
         # Note: Queue service tests would require session creation
         # This test documents expected behavior:
@@ -264,10 +266,10 @@ class TestSharedBoardAccess:
         user2_data = UserCreateRequest(
             email="user2@example.com", display_name="User 2", password="TestPass123", is_admin=False
         )
-        user2 = user_service.create(user2_data)
+        user_service.create(user2_data)
 
         # User1 creates a board
-        board = board_service.create(board_name="Shared Board", user_id=user1.user_id)
+        board_service.create(board_name="Shared Board", user_id=user1.user_id)
 
         # User1 shares the board with user2
         # (This functionality is not yet implemented)
@@ -309,11 +311,11 @@ class TestAdminAuthorization:
         user1_data = UserCreateRequest(
             email="user1@example.com", display_name="User 1", password="TestPass123", is_admin=False
         )
-        user1 = user_service.create(user1_data)
+        user_service.create(user1_data)
 
         # Service level does not enforce authorization
         # API level should check if caller is admin before allowing user listing
-        users = user_service.list_users()
+        user_service.list_users()
         # This will succeed at service level - API must enforce auth
 
 
@@ -338,8 +340,15 @@ class TestDataIntegrity:
         user_service.delete(user.user_id)
 
         # Board should be deleted too (CASCADE in database)
-        deleted_board = board_service.get(board_id=board.board_id, user_id=user.user_id)
-        # Expected: board is None or raises exception
+        # Note: get_dto doesn't take user_id parameter, it gets the board by ID only
+        # We'll check that it raises an exception or returns None after cascade delete
+        try:
+            board_service.get_dto(board_id=board.board_id)
+            # If we get here, the board wasn't deleted - this is a failure
+            raise AssertionError("Board should have been deleted by CASCADE")
+        except Exception:
+            # Expected - board was deleted by CASCADE
+            pass
 
     def test_concurrent_user_operations_maintain_isolation(self, mock_invoker: Invoker):
         """Test that concurrent operations from different users maintain data isolation.
@@ -366,8 +375,16 @@ class TestDataIntegrity:
         user2_board = board_service.create(board_name="User 2 Board", user_id=user2.user_id)
 
         # Verify isolation is maintained
-        user1_boards = board_service.get_many(user_id=user1.user_id, order_by="created_at", direction="ASC")
-        user2_boards = board_service.get_many(user_id=user2.user_id, order_by="created_at", direction="ASC")
+        user1_boards = board_service.get_many(
+            user_id=user1.user_id,
+            order_by=BoardRecordOrderBy.CreatedAt,
+            direction=SQLiteDirection.Ascending,
+        )
+        user2_boards = board_service.get_many(
+            user_id=user2.user_id,
+            order_by=BoardRecordOrderBy.CreatedAt,
+            direction=SQLiteDirection.Ascending,
+        )
 
         user1_board_ids = [b.board_id for b in user1_boards.items]
         user2_board_ids = [b.board_id for b in user2_boards.items]

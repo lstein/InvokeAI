@@ -6,6 +6,7 @@ ensure the system performs acceptably under load.
 
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from logging import Logger
 
 import pytest
 
@@ -17,7 +18,13 @@ from invokeai.app.services.users.users_default import UserService
 
 
 @pytest.fixture
-def user_service(logger) -> UserService:
+def logger() -> Logger:
+    """Create a logger for testing."""
+    return Logger("test_performance")
+
+
+@pytest.fixture
+def user_service(logger: Logger) -> UserService:
     """Create a user service with in-memory database for testing."""
     db = SqliteDatabase(db_path=None, logger=logger, verbose=False)
 
@@ -337,7 +344,7 @@ class TestUserServicePerformance:
 
         start_time = time.time()
         for _ in range(iterations):
-            users = user_service.list_users(limit=50)
+            user_service.list_users(limit=50)
         elapsed_time = time.time() - start_time
 
         avg_time_ms = (elapsed_time / iterations) * 1000
@@ -453,7 +460,7 @@ class TestScalabilityBenchmarks:
         success_rate = (total_success / total_requests) * 100
         requests_per_second = total_requests / elapsed_time
 
-        print(f"\nLoad test results:")
+        print("\nLoad test results:")
         print(f"  Total requests: {total_requests}")
         print(f"  Success rate: {success_rate:.1f}%")
         print(f"  Requests/second: {requests_per_second:.0f}")

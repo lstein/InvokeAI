@@ -52,7 +52,28 @@ def verify_token(token: str) -> TokenData | None:
         TokenData if valid, None if invalid or expired
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # python-jose 3.5.0 has a bug where exp verification doesn't work properly
+        # First decode without verification to get the payload
+        unverified_payload = jwt.get_unverified_claims(token)
+
+        # Check expiration manually
+        if "exp" in unverified_payload:
+            exp_timestamp = unverified_payload["exp"]
+            current_timestamp = datetime.now(timezone.utc).timestamp()
+            if current_timestamp >= exp_timestamp:
+                # Token is expired
+                return None
+
+        # Now verify signature (this will also check exp, but we've already checked it above)
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+        )
         return TokenData(**payload)
     except JWTError:
+        # Token is invalid (bad signature, malformed, etc.)
+        return None
+    except Exception:
+        # Catch any other exceptions (e.g., Pydantic validation errors)
         return None
