@@ -140,6 +140,11 @@ nav:
       - Low VRAM mode: 'features/low-vram.md'
       - Database: 'features/database.md'
       - New to InvokeAI?: 'help/gettingStartedWithAI.md'
+  - Multi-User Mode:
+      - User Guide: 'multiuser/user_guide.md'
+      - Administrator Guide: 'multiuser/admin_guide.md'
+      - API Guide: 'multiuser/api_guide.md'
+      - Specification: 'multiuser/specification.md'
   - Contributing:
       - Overview: 'contributing/index.md'
       - Code of Conduct: 'CODE_OF_CONDUCT.md'
