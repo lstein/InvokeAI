@@ -132,6 +132,11 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
                 ))}
             </Flex>
           )}
+          {!item.field_values && item.user_id !== 'system' && (
+            <Text as="span" color="base.500" fontStyle="italic">
+              {t('queue.fieldValuesHidden')}
+            </Text>
+          )}
         </Flex>
 
         <Flex alignItems="center" w={COLUMN_WIDTHS.actions} pe={3}>

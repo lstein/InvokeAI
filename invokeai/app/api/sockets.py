@@ -39,6 +39,9 @@ from invokeai.app.services.events.events_common import (
     QueueItemStatusChangedEvent,
     register_events,
 )
+from invokeai.backend.util.logging import InvokeAILogger
+
+logger = InvokeAILogger.get_logger()
 
 
 class QueueSubscriptionEvent(BaseModel):
@@ -95,9 +98,13 @@ class SocketIO:
         self._sio = AsyncServer(async_mode="asgi", cors_allowed_origins="*")
         self._app = ASGIApp(socketio_server=self._sio, socketio_path="/ws/socket.io")
         app.mount("/ws", self._app)
+        
+        # Track user information for each socket connection
+        self._socket_users: dict[str, dict[str, Any]] = {}
 
         # Set up authentication middleware
         self._sio.on("connect", handler=self._handle_connect)
+        self._sio.on("disconnect", handler=self._handle_disconnect)
         
         self._sio.on(self._sub_queue, handler=self._handle_sub_queue)
         self._sio.on(self._unsub_queue, handler=self._handle_unsub_queue)
@@ -112,7 +119,7 @@ class SocketIO:
         """Handle socket connection and authenticate the user.
         
         Returns True to accept the connection, False to reject it.
-        Stores user_id in the socket session data for later use.
+        Stores user_id in the internal socket users dict for later use.
         """
         # Extract token from auth data or headers
         token = None
@@ -129,22 +136,56 @@ class SocketIO:
         if token:
             token_data = verify_token(token)
             if token_data:
-                # Store user_id and is_admin in socket session
-                await self._sio.save_session(sid, {
+                # Store user_id and is_admin in socket users dict
+                self._socket_users[sid] = {
                     "user_id": token_data.user_id,
                     "is_admin": token_data.is_admin,
-                })
+                }
+                logger.info(f"Socket {sid} connected with user_id: {token_data.user_id}, is_admin: {token_data.is_admin}")
                 return True
         
         # If no valid token, store system user for backward compatibility
-        await self._sio.save_session(sid, {
+        self._socket_users[sid] = {
             "user_id": "system",
             "is_admin": False,
-        })
+        }
+        logger.info(f"Socket {sid} connected as system user (no valid token)")
         return True
+    
+    async def _handle_disconnect(self, sid: str) -> None:
+        """Handle socket disconnection and cleanup user info."""
+        if sid in self._socket_users:
+            del self._socket_users[sid]
+            logger.debug(f"Socket {sid} disconnected and cleaned up")
 
     async def _handle_sub_queue(self, sid: str, data: Any) -> None:
-        await self._sio.enter_room(sid, QueueSubscriptionEvent(**data).queue_id)
+        """Handle queue subscription and add socket to both queue and user-specific rooms."""
+        queue_id = QueueSubscriptionEvent(**data).queue_id
+        
+        # Check if we have user info for this socket
+        if sid not in self._socket_users:
+            logger.warning(f"Socket {sid} subscribing to queue {queue_id} but has no user info - need to authenticate via connect event")
+            # Store as system user temporarily - real auth should happen in connect
+            self._socket_users[sid] = {
+                "user_id": "system",
+                "is_admin": False,
+            }
+        
+        user_id = self._socket_users[sid]['user_id']
+        is_admin = self._socket_users[sid]['is_admin']
+        
+        # Add socket to the queue room
+        await self._sio.enter_room(sid, queue_id)
+        
+        # Also add socket to a user-specific room for event filtering
+        user_room = f"user:{user_id}"
+        await self._sio.enter_room(sid, user_room)
+        
+        # If admin, also add to admin room to receive all events
+        if is_admin:
+            await self._sio.enter_room(sid, "admin")
+        
+        logger.info(f"Socket {sid} (user_id: {user_id}, is_admin: {is_admin}) subscribed to queue {queue_id} and user room {user_room}")
 
     async def _handle_unsub_queue(self, sid: str, data: Any) -> None:
         await self._sio.leave_room(sid, QueueSubscriptionEvent(**data).queue_id)
@@ -161,35 +202,39 @@ class SocketIO:
         For queue item events, only emit to the user who owns the queue item,
         or to all admins. For other queue events, emit to all subscribers.
         """
-        event_name, event_data = event
-        
-        # Check if this is a queue item event that should be filtered by user
-        if isinstance(event_data, QueueItemEventBase) and hasattr(event_data, "user_id"):
-            # Get all socket IDs in the queue room
-            room_name = event_data.queue_id
-            room_sids = await self._sio.manager.get_participants("/", room_name)
+        try:
+            event_name, event_data = event
             
-            # Filter sids based on user_id or admin status
-            for sid in room_sids:
-                session = await self._sio.get_session(sid)
-                if session:
-                    session_user_id = session.get("user_id", "system")
-                    is_admin = session.get("is_admin", False)
-                    
-                    # Emit to the owner or to admins
-                    if session_user_id == event_data.user_id or is_admin:
-                        await self._sio.emit(
-                            event=event_name,
-                            data=event_data.model_dump(mode="json"),
-                            room=sid,  # Emit to specific socket
-                        )
-        else:
-            # For non-item events (like queue status), emit to all subscribers
-            await self._sio.emit(
-                event=event_name,
-                data=event_data.model_dump(mode="json"),
-                room=event_data.queue_id
-            )
+            # Check if this is a queue item event that should be filtered by user
+            if isinstance(event_data, QueueItemEventBase) and hasattr(event_data, "user_id"):
+                # Emit to user-specific room and admin room
+                user_room = f"user:{event_data.user_id}"
+                
+                # Emit to the user's room
+                await self._sio.emit(
+                    event=event_name,
+                    data=event_data.model_dump(mode="json"),
+                    room=user_room
+                )
+                
+                # Also emit to admin room so admins can see all events
+                await self._sio.emit(
+                    event=event_name,
+                    data=event_data.model_dump(mode="json"),
+                    room="admin"
+                )
+                
+                logger.debug(f"Emitted {event_name} to user room {user_room} and admin room")
+            else:
+                # For non-item events (like queue status), emit to all subscribers
+                await self._sio.emit(
+                    event=event_name,
+                    data=event_data.model_dump(mode="json"),
+                    room=event_data.queue_id
+                )
+        except Exception as e:
+            # Log any unhandled exceptions in event handling to prevent silent failures
+            logger.error(f"Error handling queue event {event[0]}: {e}", exc_info=True)
 
     async def _handle_model_event(self, event: FastAPIEvent[ModelEventBase | DownloadEventBase]) -> None:
         await self._sio.emit(event=event[0], data=event[1].model_dump(mode="json"))
