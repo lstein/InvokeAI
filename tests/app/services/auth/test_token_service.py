@@ -151,10 +151,13 @@ class TestTokenVerification:
 
         token = create_access_token(token_data)
 
-        # Try to modify the token by changing a character
+        # Try to modify the token by changing a character in the middle
         # JWT tokens are base64 encoded, so changing any character should invalidate the signature
-        if len(token) > 10:
-            modified_token = token[:-1] + ("X" if token[-1] != "X" else "Y")
+        # Note: We change a character in the middle to avoid Base64 padding issues where
+        # the last character might not affect the decoded value
+        if len(token) > 50:
+            mid = len(token) // 2
+            modified_token = token[:mid] + ("X" if token[mid] != "X" else "Y") + token[mid + 1 :]
             verified_data = verify_token(modified_token)
             assert verified_data is None
 
@@ -291,8 +294,13 @@ class TestTokenSecurity:
         if len(token) > 50:
             # Change a character in the signature part (last part of JWT)
             parts = token.split(".")
-            if len(parts) == 3:
-                modified_signature = parts[2][:-1] + ("X" if parts[2][-1] != "X" else "Y")
+            if len(parts) == 3 and len(parts[2]) > 10:
+                # Modify a character in the middle of the signature to avoid Base64 padding issues
+                # where the last few characters might not affect the decoded value
+                mid = len(parts[2]) // 2
+                modified_signature = (
+                    parts[2][:mid] + ("X" if parts[2][mid] != "X" else "Y") + parts[2][mid + 1 :]
+                )
                 modified_token = f"{parts[0]}.{parts[1]}.{modified_signature}"
                 assert verify_token(modified_token) is None
 
