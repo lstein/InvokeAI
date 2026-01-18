@@ -475,6 +475,18 @@ export const setEventListeners = ({ socket, store, setIsConnected }: SetEventLis
 
   socket.on('queue_items_retried', (data) => {
     log.debug({ data }, 'Queue items retried');
+    dispatch(
+      queueApi.util.invalidateTags([
+        'SessionQueueStatus',
+        'BatchStatus',
+        'CurrentSessionQueueItem',
+        'NextSessionQueueItem',
+        'QueueCountsByDestination',
+        'SessionQueueItemIdList',
+        { type: 'SessionQueueItem', id: LIST_TAG },
+        { type: 'SessionQueueItem', id: LIST_ALL_TAG },
+      ])
+    );
   });
 
   socket.on('bulk_download_started', (data) => {
