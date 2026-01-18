@@ -344,6 +344,7 @@
         "other": "Other",
         "gallery": "Gallery",
         "batchFieldValues": "Batch Field Values",
+        "fieldValuesSuppressed": "Hidden for privacy",
         "item": "Item",
         "session": "Session",
         "notReady": "Unable to Queue",
@@ -368,7 +369,8 @@
         "sortColumn": "Sort Column",
         "sortBy": "Sort by {{column}}",
         "sortOrderAscending": "Ascending",
-        "sortOrderDescending": "Descending"
+        "sortOrderDescending": "Descending",
+        "fieldValuesSuppressed": "Hidden for privacy"
     },
     "invocationCache": {
         "invocationCache": "Invocation Cache",
@@ -1606,8 +1608,6 @@
         "problemUnpublishingWorkflow": "Problem Unpublishing Workflow",
         "problemUnpublishingWorkflowDescription": "There was a problem unpublishing the workflow. Please try again.",
         "workflowUnpublished": "Workflow Unpublished",
-        "sentToCanvas": "Sent to Canvas",
-        "sentToUpscale": "Sent to Upscale",
         "promptGenerationStarted": "Prompt generation started",
         "uploadAndPromptGenerationFailed": "Failed to upload image and generate prompt",
         "promptExpansionFailed": "We ran into an issue. Please try prompt expansion again.",
@@ -2761,7 +2761,6 @@
         "selectPreset": "Select Style Preset",
         "noMatchingPresets": "No matching presets"
     },
-
     "ui": {
         "tabs": {
             "generate": "Generate",

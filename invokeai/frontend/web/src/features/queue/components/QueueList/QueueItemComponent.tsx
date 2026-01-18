@@ -1,5 +1,7 @@
 import type { ChakraProps, CollapseProps, FlexProps } from '@invoke-ai/ui-library';
 import { ButtonGroup, Collapse, Flex, IconButton, Text } from '@invoke-ai/ui-library';
+import { useAppSelector } from 'app/store/storeHooks';
+import { selectCurrentUser } from 'features/auth/store/authSlice';
 import QueueStatusBadge from 'features/queue/components/common/QueueStatusBadge';
 import { useDestinationText } from 'features/queue/components/QueueList/useDestinationText';
 import { useOriginText } from 'features/queue/components/QueueList/useOriginText';
@@ -30,6 +32,7 @@ const sx: ChakraProps['sx'] = {
 const QueueItemComponent = ({ index, item }: InnerItemProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const currentUser = useAppSelector(selectCurrentUser);
   const handleToggle = useCallback(() => setIsOpen((s) => !s), [setIsOpen]);
   const cancelQueueItem = useCancelQueueItem();
   const onClickCancelQueueItem = useCallback(
@@ -47,6 +50,14 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
     },
     [item.item_id, retryQueueItem]
   );
+
+  // Check if current user can view field values (owner or admin)
+  const canViewFieldValues = useMemo(() => {
+    if (!currentUser) {
+      return false;
+    }
+    return currentUser.is_admin || currentUser.user_id === item.user_id;
+  }, [currentUser, item.user_id]);
 
   const executionTime = useMemo(() => {
     if (!item.completed_at || !item.started_at) {
@@ -96,7 +107,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
           </Text>
         </Flex>
         <Flex overflow="hidden" flexGrow={1}>
-          {item.field_values && (
+          {item.field_values && canViewFieldValues && (
             <Flex gap={2} w="full" whiteSpace="nowrap" textOverflow="ellipsis" overflow="hidden">
               {item.field_values
                 .filter((v) => v.node_path !== 'metadata_accumulator')
@@ -109,6 +120,11 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
                   </Text>
                 ))}
             </Flex>
+          )}
+          {item.field_values && !canViewFieldValues && (
+            <Text fontSize="sm" fontStyle="italic" color="base.500">
+              {t('queue.fieldValuesSuppressed')}
+            </Text>
           )}
         </Flex>
 
