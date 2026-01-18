@@ -475,18 +475,23 @@ export const setEventListeners = ({ socket, store, setIsConnected }: SetEventLis
 
   socket.on('queue_items_retried', (data) => {
     log.debug({ data }, 'Queue items retried');
-    dispatch(
-      queueApi.util.invalidateTags([
-        'SessionQueueStatus',
-        'BatchStatus',
-        'CurrentSessionQueueItem',
-        'NextSessionQueueItem',
-        'QueueCountsByDestination',
-        'SessionQueueItemIdList',
-        { type: 'SessionQueueItem', id: LIST_TAG },
-        { type: 'SessionQueueItem', id: LIST_ALL_TAG },
-      ])
-    );
+    const tagsToInvalidate: ApiTagDescription[] = [
+      'SessionQueueStatus',
+      'BatchStatus',
+      'CurrentSessionQueueItem',
+      'NextSessionQueueItem',
+      'QueueCountsByDestination',
+      'SessionQueueItemIdList',
+      { type: 'SessionQueueItem', id: LIST_TAG },
+      { type: 'SessionQueueItem', id: LIST_ALL_TAG },
+    ];
+    // Invalidate each retried item specifically
+    if (data.retried_item_ids) {
+      for (const itemId of data.retried_item_ids) {
+        tagsToInvalidate.push({ type: 'SessionQueueItem', id: itemId });
+      }
+    }
+    dispatch(queueApi.util.invalidateTags(tagsToInvalidate));
   });
 
   socket.on('bulk_download_started', (data) => {
