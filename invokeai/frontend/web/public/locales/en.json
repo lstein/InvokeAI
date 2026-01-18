@@ -335,6 +335,7 @@
         "canceled": "Canceled",
         "completedIn": "Completed in",
         "batch": "Batch",
+        "user": "User",
         "origin": "Origin",
         "destination": "Dest",
         "upscaling": "Upscaling",
