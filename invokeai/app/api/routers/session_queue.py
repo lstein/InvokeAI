@@ -37,7 +37,9 @@ class SessionQueueAndProcessorStatus(BaseModel):
     processor: SessionProcessorStatus
 
 
-def sanitize_queue_item_for_user(queue_item: SessionQueueItem, current_user_id: str, is_admin: bool) -> SessionQueueItem:
+def sanitize_queue_item_for_user(
+    queue_item: SessionQueueItem, current_user_id: str, is_admin: bool
+) -> SessionQueueItem:
     """Sanitize queue item for non-admin users viewing other users' items.
 
     For non-admin users viewing queue items belonging to other users,

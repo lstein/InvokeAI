@@ -140,7 +140,9 @@ class SocketIO:
                     "user_id": token_data.user_id,
                     "is_admin": token_data.is_admin,
                 }
-                logger.info(f"Socket {sid} connected with user_id: {token_data.user_id}, is_admin: {token_data.is_admin}")
+                logger.info(
+                    f"Socket {sid} connected with user_id: {token_data.user_id}, is_admin: {token_data.is_admin}"
+                )
                 return True
 
         # If no valid token, store system user for backward compatibility
@@ -163,15 +165,17 @@ class SocketIO:
 
         # Check if we have user info for this socket
         if sid not in self._socket_users:
-            logger.warning(f"Socket {sid} subscribing to queue {queue_id} but has no user info - need to authenticate via connect event")
+            logger.warning(
+                f"Socket {sid} subscribing to queue {queue_id} but has no user info - need to authenticate via connect event"
+            )
             # Store as system user temporarily - real auth should happen in connect
             self._socket_users[sid] = {
                 "user_id": "system",
                 "is_admin": False,
             }
 
-        user_id = self._socket_users[sid]['user_id']
-        is_admin = self._socket_users[sid]['is_admin']
+        user_id = self._socket_users[sid]["user_id"]
+        is_admin = self._socket_users[sid]["is_admin"]
 
         # Add socket to the queue room
         await self._sio.enter_room(sid, queue_id)
@@ -184,7 +188,9 @@ class SocketIO:
         if is_admin:
             await self._sio.enter_room(sid, "admin")
 
-        logger.info(f"Socket {sid} (user_id: {user_id}, is_admin: {is_admin}) subscribed to queue {queue_id} and user room {user_room}")
+        logger.info(
+            f"Socket {sid} (user_id: {user_id}, is_admin: {is_admin}) subscribed to queue {queue_id} and user room {user_room}"
+        )
 
     async def _handle_unsub_queue(self, sid: str, data: Any) -> None:
         await self._sio.leave_room(sid, QueueSubscriptionEvent(**data).queue_id)
@@ -217,18 +223,10 @@ class SocketIO:
                 user_room = f"user:{event_data.user_id}"
 
                 # Emit to the user's room
-                await self._sio.emit(
-                    event=event_name,
-                    data=event_data.model_dump(mode="json"),
-                    room=user_room
-                )
+                await self._sio.emit(event=event_name, data=event_data.model_dump(mode="json"), room=user_room)
 
                 # Also emit to admin room so admins can see all events
-                await self._sio.emit(
-                    event=event_name,
-                    data=event_data.model_dump(mode="json"),
-                    room="admin"
-                )
+                await self._sio.emit(event=event_name, data=event_data.model_dump(mode="json"), room="admin")
 
                 logger.info(f"Emitted private invocation event {event_name} to user room {user_room} and admin room")
 
@@ -237,21 +235,21 @@ class SocketIO:
             elif isinstance(event_data, QueueItemEventBase) and hasattr(event_data, "user_id"):
                 # Emit to all subscribers in the queue
                 await self._sio.emit(
-                    event=event_name,
-                    data=event_data.model_dump(mode="json"),
-                    room=event_data.queue_id
+                    event=event_name, data=event_data.model_dump(mode="json"), room=event_data.queue_id
                 )
 
-                logger.info(f"Emitted public queue item event {event_name} to all subscribers in queue {event_data.queue_id}")
+                logger.info(
+                    f"Emitted public queue item event {event_name} to all subscribers in queue {event_data.queue_id}"
+                )
 
             else:
                 # For other queue events (like QueueClearedEvent, BatchEnqueuedEvent), emit to all subscribers
                 await self._sio.emit(
-                    event=event_name,
-                    data=event_data.model_dump(mode="json"),
-                    room=event_data.queue_id
+                    event=event_name, data=event_data.model_dump(mode="json"), room=event_data.queue_id
                 )
-                logger.info(f"Emitted general queue event {event_name} to all subscribers in queue {event_data.queue_id}")
+                logger.info(
+                    f"Emitted general queue event {event_name} to all subscribers in queue {event_data.queue_id}"
+                )
         except Exception as e:
             # Log any unhandled exceptions in event handling to prevent silent failures
             logger.error(f"Error handling queue event {event[0]}: {e}", exc_info=True)
