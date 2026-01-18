@@ -60,7 +60,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
   const isFailed = useMemo(() => ['canceled', 'failed'].includes(item.status), [item.status]);
   const originText = useOriginText(item.origin);
   const destinationText = useDestinationText(item.destination);
-  
+
   // Display user name - prefer display_name, fallback to email, then user_id
   const userText = useMemo(() => {
     if (item.user_display_name) {
@@ -107,13 +107,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
           </Text>
         </Flex>
         <Flex w={COLUMN_WIDTHS.user} flexShrink={0}>
-          <Text 
-            overflow="hidden" 
-            textOverflow="ellipsis" 
-            whiteSpace="nowrap" 
-            alignItems="center"
-            title={userText}
-          >
+          <Text overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" alignItems="center" title={userText}>
             {userText}
           </Text>
         </Flex>

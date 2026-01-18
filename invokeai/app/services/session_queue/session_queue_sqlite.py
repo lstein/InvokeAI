@@ -158,7 +158,7 @@ class SqliteSessionQueue(SessionQueueBase):
         with self._db.transaction() as cursor:
             cursor.execute(
                 """--sql
-                SELECT 
+                SELECT
                     sq.*,
                     u.display_name as user_display_name,
                     u.email as user_email
@@ -182,7 +182,7 @@ class SqliteSessionQueue(SessionQueueBase):
         with self._db.transaction() as cursor:
             cursor.execute(
                 """--sql
-                SELECT 
+                SELECT
                     sq.*,
                     u.display_name as user_display_name,
                     u.email as user_email
@@ -207,7 +207,7 @@ class SqliteSessionQueue(SessionQueueBase):
         with self._db.transaction() as cursor:
             cursor.execute(
                 """--sql
-                SELECT 
+                SELECT
                     sq.*,
                     u.display_name as user_display_name,
                     u.email as user_email
@@ -577,7 +577,7 @@ class SqliteSessionQueue(SessionQueueBase):
         with self._db.transaction() as cursor:
             cursor.execute(
                 """--sql
-                SELECT 
+                SELECT
                     sq.*,
                     u.display_name as user_display_name,
                     u.email as user_email
@@ -669,7 +669,7 @@ class SqliteSessionQueue(SessionQueueBase):
         """Gets all queue items that match the given parameters"""
         with self._db.transaction() as cursor:
             query = """--sql
-                SELECT 
+                SELECT
                     sq.*,
                     u.display_name as user_display_name,
                     u.email as user_email
