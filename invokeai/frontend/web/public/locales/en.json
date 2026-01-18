@@ -344,7 +344,7 @@
         "other": "Other",
         "gallery": "Gallery",
         "batchFieldValues": "Batch Field Values",
-        "fieldValuesSuppressed": "Hidden for privacy",
+        "fieldValuesSuppressed": "<Hidden>",
         "item": "Item",
         "session": "Session",
         "notReady": "Unable to Queue",
@@ -370,7 +370,7 @@
         "sortBy": "Sort by {{column}}",
         "sortOrderAscending": "Ascending",
         "sortOrderDescending": "Descending",
-        "fieldValuesSuppressed": "Hidden for privacy"
+        "fieldValuesSuppressed": "<Hidden>"
     },
     "invocationCache": {
         "invocationCache": "Invocation Cache",
