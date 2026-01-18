@@ -5,6 +5,14 @@ from datetime import timedelta
 
 from invokeai.app.services.auth.token_service import TokenData, create_access_token, verify_token
 
+# Minimum token length to safely modify middle characters for testing
+# JWT tokens have format header.payload.signature and are typically >180 characters
+MIN_TOKEN_LENGTH_FOR_MODIFICATION = 50
+
+# Minimum signature length to safely modify middle characters for testing
+# JWT signatures are typically 43 characters (base64-encoded HMAC-SHA256)
+MIN_SIGNATURE_LENGTH_FOR_MODIFICATION = 10
+
 
 class TestTokenCreation:
     """Tests for JWT token creation."""
@@ -155,7 +163,7 @@ class TestTokenVerification:
         # JWT tokens are base64 encoded, so changing any character should invalidate the signature
         # Note: We change a character in the middle to avoid Base64 padding issues where
         # the last character might not affect the decoded value
-        if len(token) > 50:
+        if len(token) > MIN_TOKEN_LENGTH_FOR_MODIFICATION:
             mid = len(token) // 2
             modified_token = token[:mid] + ("X" if token[mid] != "X" else "Y") + token[mid + 1 :]
             verified_data = verify_token(modified_token)
@@ -291,10 +299,10 @@ class TestTokenSecurity:
         assert verify_token(token) is not None
 
         # Modified token should fail verification
-        if len(token) > 50:
+        if len(token) > MIN_TOKEN_LENGTH_FOR_MODIFICATION:
             # Change a character in the signature part (last part of JWT)
             parts = token.split(".")
-            if len(parts) == 3 and len(parts[2]) > 10:
+            if len(parts) == 3 and len(parts[2]) > MIN_SIGNATURE_LENGTH_FOR_MODIFICATION:
                 # Modify a character in the middle of the signature to avoid Base64 padding issues
                 # where the last few characters might not affect the decoded value
                 mid = len(parts[2]) // 2
