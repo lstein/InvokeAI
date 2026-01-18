@@ -306,9 +306,7 @@ class TestTokenSecurity:
                 # Modify a character in the middle of the signature to avoid Base64 padding issues
                 # where the last few characters might not affect the decoded value
                 mid = len(parts[2]) // 2
-                modified_signature = (
-                    parts[2][:mid] + ("X" if parts[2][mid] != "X" else "Y") + parts[2][mid + 1 :]
-                )
+                modified_signature = parts[2][:mid] + ("X" if parts[2][mid] != "X" else "Y") + parts[2][mid + 1 :]
                 modified_token = f"{parts[0]}.{parts[1]}.{modified_signature}"
                 assert verify_token(modified_token) is None
 
