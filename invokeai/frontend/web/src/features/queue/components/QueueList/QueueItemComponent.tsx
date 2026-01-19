@@ -33,7 +33,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const currentUser = useAppSelector(selectCurrentUser);
-  
+
   // Check if the current user can view this queue item's details
   const canViewDetails = useMemo(() => {
     // Admins can view all items
@@ -50,13 +50,13 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
     }
     return false;
   }, [currentUser, item.user_id]);
-  
+
   const handleToggle = useCallback(() => {
     if (canViewDetails) {
       setIsOpen((s) => !s);
     }
   }, [canViewDetails]);
-  
+
   const cancelQueueItem = useCancelQueueItem();
   const onClickCancelQueueItem = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
