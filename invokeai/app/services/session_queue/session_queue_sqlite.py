@@ -331,7 +331,7 @@ class SqliteSessionQueue(SessionQueueBase):
             params = [queue_id]
             if user_id is not None:
                 params.append(user_id)
-            
+
             cursor.execute(
                 f"""--sql
                 SELECT COUNT(*)
@@ -397,7 +397,7 @@ class SqliteSessionQueue(SessionQueueBase):
         with self._db.transaction() as cursor:
             current_queue_item = self.get_current(queue_id)
             placeholders = ", ".join(["?" for _ in batch_ids])
-            
+
             # Build WHERE clause with optional user_id filter
             user_filter = "AND user_id = ?" if user_id is not None else ""
             where = f"""--sql
@@ -414,7 +414,7 @@ class SqliteSessionQueue(SessionQueueBase):
             params = [queue_id] + batch_ids
             if user_id is not None:
                 params.append(user_id)
-            
+
             cursor.execute(
                 f"""--sql
                 SELECT COUNT(*)
@@ -445,7 +445,7 @@ class SqliteSessionQueue(SessionQueueBase):
     ) -> CancelByDestinationResult:
         with self._db.transaction() as cursor:
             current_queue_item = self.get_current(queue_id)
-            
+
             # Build WHERE clause with optional user_id filter
             user_filter = "AND user_id = ?" if user_id is not None else ""
             where = f"""--sql
@@ -462,7 +462,7 @@ class SqliteSessionQueue(SessionQueueBase):
             params = [queue_id, destination]
             if user_id is not None:
                 params.append(user_id)
-            
+
             cursor.execute(
                 f"""--sql
                 SELECT COUNT(*)
@@ -480,12 +480,12 @@ class SqliteSessionQueue(SessionQueueBase):
                 """,
                 tuple(params),
             )
-        
+
         # Handle current item separately - check ownership if user_id is provided
         if current_queue_item is not None and current_queue_item.destination == destination:
             if user_id is None or current_queue_item.user_id == user_id:
                 self._set_queue_item_status(current_queue_item.item_id, "canceled")
-        
+
         return CancelByDestinationResult(canceled=count)
 
     def delete_by_destination(
@@ -493,18 +493,18 @@ class SqliteSessionQueue(SessionQueueBase):
     ) -> DeleteByDestinationResult:
         with self._db.transaction() as cursor:
             current_queue_item = self.get_current(queue_id)
-            
+
             # Handle current item separately - check ownership if user_id is provided
             if current_queue_item is not None and current_queue_item.destination == destination:
                 if user_id is None or current_queue_item.user_id == user_id:
                     self.cancel_queue_item(current_queue_item.item_id)
-            
+
             # Build WHERE clause with optional user_id filter
             user_filter = "AND user_id = ?" if user_id is not None else ""
             params = [queue_id, destination]
             if user_id is not None:
                 params.append(user_id)
-            
+
             cursor.execute(
                 f"""--sql
                 SELECT COUNT(*)
@@ -528,23 +528,6 @@ class SqliteSessionQueue(SessionQueueBase):
                 tuple(params),
             )
         return DeleteByDestinationResult(deleted=count)
-                  queue_id = ?
-                  AND destination = ?;
-                """,
-                params,
-            )
-            count = cursor.fetchone()[0]
-            cursor.execute(
-                """--sql
-                DELETE
-                FROM session_queue
-                WHERE
-                  queue_id = ?
-                  AND destination = ?;
-                """,
-                params,
-            )
-        return DeleteByDestinationResult(deleted=count)
 
     def delete_all_except_current(self, queue_id: str, user_id: Optional[str] = None) -> DeleteAllExceptCurrentResult:
         with self._db.transaction() as cursor:
@@ -559,7 +542,7 @@ class SqliteSessionQueue(SessionQueueBase):
             params = [queue_id]
             if user_id is not None:
                 params.append(user_id)
-            
+
             cursor.execute(
                 f"""--sql
                 SELECT COUNT(*)
@@ -627,7 +610,7 @@ class SqliteSessionQueue(SessionQueueBase):
             params = [queue_id]
             if user_id is not None:
                 params.append(user_id)
-            
+
             cursor.execute(
                 f"""--sql
                 SELECT COUNT(*)

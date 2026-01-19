@@ -294,13 +294,12 @@ async def retry_items_by_id(
                     queue_item = ApiDependencies.invoker.services.session_queue.get_queue_item(item_id)
                     if queue_item.user_id != current_user.user_id:
                         raise HTTPException(
-                            status_code=403,
-                            detail=f"You do not have permission to retry queue item {item_id}"
+                            status_code=403, detail=f"You do not have permission to retry queue item {item_id}"
                         )
                 except SessionQueueItemNotFoundError:
                     # Skip items that don't exist - they will be handled by retry_items_by_id
                     continue
-        
+
         return ApiDependencies.invoker.services.session_queue.retry_items_by_id(queue_id=queue_id, item_ids=item_ids)
     except HTTPException:
         raise
@@ -326,8 +325,7 @@ async def clear(
             # Check authorization for canceling the current item
             if queue_item.user_id != current_user.user_id and not current_user.is_admin:
                 raise HTTPException(
-                    status_code=403,
-                    detail="You do not have permission to cancel the currently executing queue item"
+                    status_code=403, detail="You do not have permission to cancel the currently executing queue item"
                 )
             ApiDependencies.invoker.services.session_queue.cancel_queue_item(queue_item.item_id)
         clear_result = ApiDependencies.invoker.services.session_queue.clear(queue_id)
@@ -468,14 +466,11 @@ async def delete_queue_item(
     try:
         # Get the queue item to check ownership
         queue_item = ApiDependencies.invoker.services.session_queue.get_queue_item(item_id)
-        
+
         # Check authorization: user must own the item or be an admin
         if queue_item.user_id != current_user.user_id and not current_user.is_admin:
-            raise HTTPException(
-                status_code=403, 
-                detail="You do not have permission to delete this queue item"
-            )
-        
+            raise HTTPException(status_code=403, detail="You do not have permission to delete this queue item")
+
         ApiDependencies.invoker.services.session_queue.delete_queue_item(item_id)
     except SessionQueueItemNotFoundError:
         raise HTTPException(status_code=404, detail=f"Queue item with id {item_id} not found in queue {queue_id}")
@@ -501,14 +496,11 @@ async def cancel_queue_item(
     try:
         # Get the queue item to check ownership
         queue_item = ApiDependencies.invoker.services.session_queue.get_queue_item(item_id)
-        
+
         # Check authorization: user must own the item or be an admin
         if queue_item.user_id != current_user.user_id and not current_user.is_admin:
-            raise HTTPException(
-                status_code=403, 
-                detail="You do not have permission to cancel this queue item"
-            )
-        
+            raise HTTPException(status_code=403, detail="You do not have permission to cancel this queue item")
+
         return ApiDependencies.invoker.services.session_queue.cancel_queue_item(item_id)
     except SessionQueueItemNotFoundError:
         raise HTTPException(status_code=404, detail=f"Queue item with id {item_id} not found in queue {queue_id}")

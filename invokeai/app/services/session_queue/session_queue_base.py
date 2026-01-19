@@ -141,9 +141,7 @@ class SessionQueueBase(ABC):
         pass
 
     @abstractmethod
-    def delete_all_except_current(
-        self, queue_id: str, user_id: Optional[str] = None
-    ) -> DeleteAllExceptCurrentResult:
+    def delete_all_except_current(self, queue_id: str, user_id: Optional[str] = None) -> DeleteAllExceptCurrentResult:
         """Deletes all queue items except in-progress items. If user_id is provided, only deletes items owned by that user."""
         pass
 
