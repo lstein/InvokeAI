@@ -3,8 +3,25 @@
 import pytest
 
 from invokeai.app.api.routers.session_queue import sanitize_queue_item_for_user
+from invokeai.app.invocations.baseinvocation import BaseInvocation, BaseInvocationOutput, invocation, invocation_output
+from invokeai.app.invocations.fields import InputField, OutputField
 from invokeai.app.services.session_queue.session_queue_common import NodeFieldValue, SessionQueueItem
 from invokeai.app.services.shared.graph import Graph, GraphExecutionState
+from invokeai.app.services.shared.invocation_context import InvocationContext
+
+
+# Define a minimal test invocation for the test
+@invocation_output("test_sanitization_output")
+class TestSanitizationInvocationOutput(BaseInvocationOutput):
+    value: str = OutputField(default="")
+
+
+@invocation("test_sanitization", version="1.0.0")
+class TestSanitizationInvocation(BaseInvocation):
+    test_field: str = InputField(default="")
+
+    def invoke(self, context: InvocationContext) -> TestSanitizationInvocationOutput:
+        return TestSanitizationInvocationOutput(value=self.test_field)
 
 
 @pytest.fixture
@@ -12,9 +29,7 @@ def sample_session_queue_item() -> SessionQueueItem:
     """Create a sample queue item with full data for testing."""
     graph = Graph()
     # Add a simple node to the graph
-    from tests.test_nodes import PromptTestInvocation
-
-    graph.add_node(PromptTestInvocation(id="test_node", prompt="test prompt"))
+    graph.add_node(TestSanitizationInvocation(id="test_node", test_field="test value"))
 
     session = GraphExecutionState(id="test_session", graph=graph)
 
@@ -28,7 +43,7 @@ def sample_session_queue_item() -> SessionQueueItem:
         user_display_name="Test User",
         user_email="test@example.com",
         field_values=[
-            NodeFieldValue(node_path="test_node", field_name="prompt", value="sensitive prompt data"),
+            NodeFieldValue(node_path="test_node", field_name="test_field", value="sensitive prompt data"),
         ],
         session=session,
         workflow=None,

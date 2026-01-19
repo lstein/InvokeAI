@@ -25,6 +25,7 @@ from invokeai.app.services.session_queue.session_queue_common import (
     SessionQueueItemNotFoundError,
     SessionQueueStatus,
 )
+from invokeai.app.services.shared.graph import Graph, GraphExecutionState
 from invokeai.app.services.shared.sqlite.sqlite_common import SQLiteDirection
 
 session_queue_router = APIRouter(prefix="/v1/queue", tags=["queue"])
@@ -62,8 +63,6 @@ def sanitize_queue_item_for_user(
     queue_item.workflow = None
     # Clear the session graph by replacing it with an empty graph execution state
     # This prevents information leakage through the generation graph
-    from invokeai.app.services.shared.graph import Graph, GraphExecutionState
-
     queue_item.session = GraphExecutionState(
         id=queue_item.session.id,
         graph=Graph(),
