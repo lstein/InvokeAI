@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { PiArrowCounterClockwiseBold, PiXBold } from 'react-icons/pi';
 import type { S } from 'services/api/types';
 
-import { COLUMN_WIDTHS } from './constants';
+import { COLUMN_WIDTHS, SYSTEM_USER_ID } from './constants';
 import QueueItemDetail from './QueueItemDetail';
 
 const selectedStyles = { bg: 'base.700' };
@@ -45,7 +45,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
       return true;
     }
     // System items can be viewed by anyone
-    if (item.user_id === 'system') {
+    if (item.user_id === SYSTEM_USER_ID) {
       return true;
     }
     return false;
@@ -95,7 +95,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
     if (item.user_email) {
       return item.user_email;
     }
-    return item.user_id || 'system';
+    return item.user_id || SYSTEM_USER_ID;
   }, [item.user_display_name, item.user_email, item.user_id]);
 
   return (
@@ -161,7 +161,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
                 ))}
             </Flex>
           )}
-          {!item.field_values && item.user_id !== 'system' && (
+          {!item.field_values && item.user_id !== SYSTEM_USER_ID && (
             <Text as="span" color="base.500" fontStyle="italic">
               {t('queue.fieldValuesHidden')}
             </Text>

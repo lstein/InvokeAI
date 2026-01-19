@@ -59,15 +59,17 @@ def sanitize_queue_item_for_user(
         return queue_item
 
     # For non-admins viewing other users' items, clear sensitive fields
-    queue_item.field_values = None
-    queue_item.workflow = None
+    # Create a shallow copy to avoid mutating the original
+    sanitized_item = queue_item.model_copy(deep=False)
+    sanitized_item.field_values = None
+    sanitized_item.workflow = None
     # Clear the session graph by replacing it with an empty graph execution state
     # This prevents information leakage through the generation graph
-    queue_item.session = GraphExecutionState(
+    sanitized_item.session = GraphExecutionState(
         id=queue_item.session.id,
         graph=Graph(),
     )
-    return queue_item
+    return sanitized_item
 
 
 @session_queue_router.post(
