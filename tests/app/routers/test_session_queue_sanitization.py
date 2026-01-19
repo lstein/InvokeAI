@@ -1,5 +1,7 @@
 """Tests for session queue item sanitization in multiuser mode."""
 
+from datetime import datetime
+
 import pytest
 
 from invokeai.app.api.routers.session_queue import sanitize_queue_item_for_user
@@ -33,6 +35,9 @@ def sample_session_queue_item() -> SessionQueueItem:
 
     session = GraphExecutionState(id="test_session", graph=graph)
 
+    # Create timestamps for the queue item
+    now = datetime.now()
+
     return SessionQueueItem(
         item_id=1,
         status="pending",
@@ -47,6 +52,10 @@ def sample_session_queue_item() -> SessionQueueItem:
         ],
         session=session,
         workflow=None,
+        created_at=now,
+        updated_at=now,
+        started_at=None,
+        completed_at=None,
     )
 
 
