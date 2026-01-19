@@ -1,5 +1,7 @@
 import type { ChakraProps, CollapseProps, FlexProps } from '@invoke-ai/ui-library';
 import { ButtonGroup, Collapse, Flex, IconButton, Text } from '@invoke-ai/ui-library';
+import { useAppSelector } from 'app/store/storeHooks';
+import { selectCurrentUser } from 'features/auth/store/authSlice';
 import QueueStatusBadge from 'features/queue/components/common/QueueStatusBadge';
 import { useDestinationText } from 'features/queue/components/QueueList/useDestinationText';
 import { useOriginText } from 'features/queue/components/QueueList/useOriginText';
@@ -31,6 +33,17 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const handleToggle = useCallback(() => setIsOpen((s) => !s), [setIsOpen]);
+  const currentUser = useAppSelector(selectCurrentUser);
+  
+  // Check if current user can manage this queue item
+  const canManageItem = useMemo(() => {
+    if (!currentUser) return false;
+    // Admin users can manage all items
+    if (currentUser.is_admin) return true;
+    // Non-admin users can only manage their own items
+    return item.user_id === currentUser.user_id;
+  }, [currentUser, item.user_id]);
+  
   const cancelQueueItem = useCancelQueueItem();
   const onClickCancelQueueItem = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
@@ -138,7 +151,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
             {!isFailed && (
               <IconButton
                 onClick={onClickCancelQueueItem}
-                isDisabled={isCanceled}
+                isDisabled={isCanceled || !canManageItem}
                 isLoading={cancelQueueItem.isLoading}
                 aria-label={t('queue.cancelItem')}
                 icon={<PiXBold />}
@@ -147,6 +160,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
             {isFailed && (
               <IconButton
                 onClick={onClickRetryQueueItem}
+                isDisabled={!canManageItem}
                 isLoading={retryQueueItem.isLoading}
                 aria-label={t('queue.retryItem')}
                 icon={<PiArrowCounterClockwiseBold />}
