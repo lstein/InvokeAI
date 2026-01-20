@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { PiArrowCounterClockwiseBold, PiXBold } from 'react-icons/pi';
 import type { S } from 'services/api/types';
 
-import { COLUMN_WIDTHS } from './constants';
+import { COLUMN_WIDTHS, SYSTEM_USER_ID } from './constants';
 import QueueItemDetail from './QueueItemDetail';
 
 const selectedStyles = { bg: 'base.700' };
@@ -44,6 +44,31 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
     return item.user_id === currentUser.user_id;
   }, [currentUser, item.user_id]);
   
+  const currentUser = useAppSelector(selectCurrentUser);
+
+  // Check if the current user can view this queue item's details
+  const canViewDetails = useMemo(() => {
+    // Admins can view all items
+    if (currentUser?.is_admin) {
+      return true;
+    }
+    // Users can view their own items
+    if (currentUser?.user_id === item.user_id) {
+      return true;
+    }
+    // System items can be viewed by anyone
+    if (item.user_id === SYSTEM_USER_ID) {
+      return true;
+    }
+    return false;
+  }, [currentUser, item.user_id]);
+
+  const handleToggle = useCallback(() => {
+    if (canViewDetails) {
+      setIsOpen((s) => !s);
+    }
+  }, [canViewDetails]);
+
   const cancelQueueItem = useCancelQueueItem();
   const onClickCancelQueueItem = useCallback(
     (e: MouseEvent<HTMLButtonElement>) => {
@@ -82,7 +107,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
     if (item.user_email) {
       return item.user_email;
     }
-    return item.user_id || 'system';
+    return item.user_id || SYSTEM_USER_ID;
   }, [item.user_display_name, item.user_email, item.user_id]);
 
   return (
@@ -95,7 +120,16 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
       sx={sx}
       data-testid="queue-item"
     >
-      <Flex minH={9} alignItems="center" gap={4} p={1.5} cursor="pointer" onClick={handleToggle}>
+      <Flex
+        minH={9}
+        alignItems="center"
+        gap={4}
+        p={1.5}
+        cursor={canViewDetails ? 'pointer' : 'not-allowed'}
+        onClick={handleToggle}
+        title={!canViewDetails ? t('queue.cannotViewDetails') : undefined}
+        opacity={canViewDetails ? 1 : 0.7}
+      >
         <Flex w={COLUMN_WIDTHS.number} alignItems="center" flexShrink={0}>
           <Text variant="subtext">{index + 1}</Text>
         </Flex>
@@ -139,7 +173,7 @@ const QueueItemComponent = ({ index, item }: InnerItemProps) => {
                 ))}
             </Flex>
           )}
-          {!item.field_values && item.user_id !== 'system' && (
+          {!item.field_values && item.user_id !== SYSTEM_USER_ID && (
             <Text as="span" color="base.500" fontStyle="italic">
               {t('queue.fieldValuesHidden')}
             </Text>
