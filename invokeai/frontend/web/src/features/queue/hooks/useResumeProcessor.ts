@@ -15,7 +15,7 @@ export const useResumeProcessor = () => {
   const [_trigger, { isLoading }] = useResumeProcessorMutation({
     fixedCacheKey: 'resumeProcessor',
   });
-  
+
   // Only admin users can resume the processor
   const isAdmin = useMemo(() => currentUser?.is_admin ?? false, [currentUser]);
 

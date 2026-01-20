@@ -15,7 +15,7 @@ export const usePauseProcessor = () => {
   const [_trigger, { isLoading }] = usePauseProcessorMutation({
     fixedCacheKey: 'pauseProcessor',
   });
-  
+
   // Only admin users can pause the processor
   const isAdmin = useMemo(() => currentUser?.is_admin ?? false, [currentUser]);
 

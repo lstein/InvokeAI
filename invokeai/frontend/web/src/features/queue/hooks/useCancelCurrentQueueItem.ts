@@ -11,16 +11,20 @@ export const useCancelCurrentQueueItem = () => {
   const { data: currentQueueItem } = useGetCurrentQueueItemQuery();
   const currentUser = useAppSelector(selectCurrentUser);
   const cancelQueueItem = useCancelQueueItem();
-  
+
   // Check if current user can cancel the current item
   const canCancelCurrentItem = useMemo(() => {
-    if (!currentUser || !currentQueueItem) return false;
+    if (!currentUser || !currentQueueItem) {
+      return false;
+    }
     // Admin users can cancel all items
-    if (currentUser.is_admin) return true;
+    if (currentUser.is_admin) {
+      return true;
+    }
     // Non-admin users can only cancel their own items
     return currentQueueItem.user_id === currentUser.user_id;
   }, [currentUser, currentQueueItem]);
-  
+
   const trigger = useCallback(
     (options?: { withToast?: boolean }) => {
       if (currentQueueItemId === null) {

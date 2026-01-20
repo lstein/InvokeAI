@@ -32,19 +32,20 @@ const sx: ChakraProps['sx'] = {
 const QueueItemComponent = ({ index, item }: InnerItemProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const handleToggle = useCallback(() => setIsOpen((s) => !s), [setIsOpen]);
   const currentUser = useAppSelector(selectCurrentUser);
-  
+
   // Check if current user can manage this queue item
   const canManageItem = useMemo(() => {
-    if (!currentUser) return false;
+    if (!currentUser) {
+      return false;
+    }
     // Admin users can manage all items
-    if (currentUser.is_admin) return true;
+    if (currentUser.is_admin) {
+      return true;
+    }
     // Non-admin users can only manage their own items
     return item.user_id === currentUser.user_id;
   }, [currentUser, item.user_id]);
-  
-  const currentUser = useAppSelector(selectCurrentUser);
 
   // Check if the current user can view this queue item's details
   const canViewDetails = useMemo(() => {
