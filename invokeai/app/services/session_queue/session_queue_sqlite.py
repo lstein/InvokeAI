@@ -786,7 +786,7 @@ class SqliteSessionQueue(SessionQueueBase):
                 (queue_id,),
             )
             counts_result = cast(list[sqlite3.Row], cursor.fetchall())
-            
+
             # Get user-specific counts if user_id is provided (using a single query with CASE)
             user_counts_result = []
             if user_id is not None:
@@ -804,7 +804,7 @@ class SqliteSessionQueue(SessionQueueBase):
         current_item = self.get_current(queue_id=queue_id)
         total = sum(row[1] or 0 for row in counts_result)
         counts: dict[str, int] = {row[0]: row[1] for row in counts_result}
-        
+
         # Process user-specific counts if available
         user_pending = None
         user_in_progress = None
@@ -812,7 +812,7 @@ class SqliteSessionQueue(SessionQueueBase):
             user_counts: dict[str, int] = {row[0]: row[1] for row in user_counts_result}
             user_pending = user_counts.get("pending", 0)
             user_in_progress = user_counts.get("in_progress", 0)
-        
+
         return SessionQueueStatus(
             queue_id=queue_id,
             item_id=current_item.item_id if current_item else None,
