@@ -2051,8 +2051,8 @@
     "cpuOnly": {
       "heading": "CPU Only",
       "paragraphs": [
-        "When enabled, this model will run on CPU instead of GPU.",
-        "Useful for large models that exceed GPU memory limits or when running multiple models simultaneously. Note that CPU execution will be slower than GPU execution."
+        "When enabled, only the text encoder component will run on CPU instead of GPU.",
+        "This saves VRAM for the denoiser while only slightly impacting performance. The conditioning outputs are automatically moved to GPU for the denoiser."
       ]
     }
   },

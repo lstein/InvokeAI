@@ -69,6 +69,15 @@ class Sd3TextEncoderInvocation(BaseInvocation):
         if self.t5_encoder is not None:
             t5_embeddings = self._t5_encode(context, SD3_T5_MAX_SEQ_LEN)
 
+        # Move all embeddings to CPU for storage to save VRAM
+        # They will be moved to the appropriate device when used by the denoiser
+        clip_l_embeddings = clip_l_embeddings.detach().to("cpu")
+        clip_l_pooled_embeddings = clip_l_pooled_embeddings.detach().to("cpu")
+        clip_g_embeddings = clip_g_embeddings.detach().to("cpu")
+        clip_g_pooled_embeddings = clip_g_pooled_embeddings.detach().to("cpu")
+        if t5_embeddings is not None:
+            t5_embeddings = t5_embeddings.detach().to("cpu")
+
         conditioning_data = ConditioningFieldData(
             conditionings=[
                 SD3ConditioningInfo(

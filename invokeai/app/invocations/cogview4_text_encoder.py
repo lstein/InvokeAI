@@ -37,6 +37,8 @@ class CogView4TextEncoderInvocation(BaseInvocation):
     @torch.no_grad()
     def invoke(self, context: InvocationContext) -> CogView4ConditioningOutput:
         glm_embeds = self._glm_encode(context, max_seq_len=COGVIEW4_GLM_MAX_SEQ_LEN)
+        # Move embeddings to CPU for storage to save VRAM
+        glm_embeds = glm_embeds.detach().to("cpu")
         conditioning_data = ConditioningFieldData(conditionings=[CogView4ConditioningInfo(glm_embeds=glm_embeds)])
         conditioning_name = context.conditioning.save(conditioning_data)
         return CogView4ConditioningOutput.build(conditioning_name)

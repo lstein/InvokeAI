@@ -57,6 +57,8 @@ class ZImageTextEncoderInvocation(BaseInvocation):
     @torch.no_grad()
     def invoke(self, context: InvocationContext) -> ZImageConditioningOutput:
         prompt_embeds = self._encode_prompt(context, max_seq_len=Z_IMAGE_MAX_SEQ_LEN)
+        # Move embeddings to CPU for storage to save VRAM
+        prompt_embeds = prompt_embeds.detach().to("cpu")
         conditioning_data = ConditioningFieldData(conditionings=[ZImageConditioningInfo(prompt_embeds=prompt_embeds)])
         conditioning_name = context.conditioning.save(conditioning_data)
         return ZImageConditioningOutput(
