@@ -68,16 +68,26 @@ class ModelLoader(ModelLoaderBase):
         model_base = self._app_config.models_path
         return (model_base / config.path).resolve()
 
-    def _get_execution_device(self, config: AnyModelConfig) -> Optional[torch.device]:
+    def _get_execution_device(self, config: AnyModelConfig, submodel_type: Optional[SubModelType] = None) -> Optional[torch.device]:
         """Determine the execution device for a model based on its configuration.
-
+        
+        CPU-only execution is only applied to text encoder submodels to save VRAM while keeping
+        the denoiser on GPU for performance. Conditioning tensors are moved to GPU after encoding.
+        
         Returns:
             torch.device("cpu") if the model should run on CPU only, None otherwise (use cache default).
         """
-        # Check if this is a main model with default settings that specify cpu_only
+        # Check if this is a text encoder submodel of a main model with cpu_only setting
         if hasattr(config, "default_settings") and config.default_settings is not None:
             if hasattr(config.default_settings, "cpu_only") and config.default_settings.cpu_only is True:
-                return torch.device("cpu")
+                # Only apply CPU execution to text encoder submodels
+                if submodel_type in [SubModelType.TextEncoder, SubModelType.TextEncoder2, SubModelType.TextEncoder3]:
+                    return torch.device("cpu")
+        
+        # Check if this is a standalone text encoder config with cpu_only field (T5Encoder, Qwen3Encoder, etc.)
+        if hasattr(config, "cpu_only") and config.cpu_only is True:
+            return torch.device("cpu")
+        
         return None
 
     def _load_and_cache(self, config: AnyModelConfig, submodel_type: Optional[SubModelType] = None) -> CacheRecord:
@@ -91,8 +101,8 @@ class ModelLoader(ModelLoaderBase):
         self._ram_cache.make_room(self.get_size_fs(config, Path(config.path), submodel_type))
         loaded_model = self._load_model(config, submodel_type)
 
-        # Determine execution device from model config
-        execution_device = self._get_execution_device(config)
+        # Determine execution device from model config, considering submodel type
+        execution_device = self._get_execution_device(config, submodel_type)
 
         self._ram_cache.put(
             get_model_cache_key(config.key, submodel_type),

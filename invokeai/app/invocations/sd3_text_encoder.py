@@ -69,6 +69,15 @@ class Sd3TextEncoderInvocation(BaseInvocation):
         if self.t5_encoder is not None:
             t5_embeddings = self._t5_encode(context, SD3_T5_MAX_SEQ_LEN)
 
+        # Move all embeddings to CPU for storage to save VRAM
+        # They will be moved to the appropriate device when used by the denoiser
+        clip_l_embeddings = clip_l_embeddings.detach().to("cpu")
+        clip_l_pooled_embeddings = clip_l_pooled_embeddings.detach().to("cpu")
+        clip_g_embeddings = clip_g_embeddings.detach().to("cpu")
+        clip_g_pooled_embeddings = clip_g_pooled_embeddings.detach().to("cpu")
+        if t5_embeddings is not None:
+            t5_embeddings = t5_embeddings.detach().to("cpu")
+
         conditioning_data = ConditioningFieldData(
             conditionings=[
                 SD3ConditioningInfo(
@@ -117,7 +126,7 @@ class Sd3TextEncoderInvocation(BaseInvocation):
                     f" {max_seq_len} tokens: {removed_text}"
                 )
 
-            prompt_embeds = t5_text_encoder(text_input_ids.to(TorchDevice.choose_torch_device()))[0]
+            prompt_embeds = t5_text_encoder(text_input_ids.to(t5_text_encoder.device))[0]
 
         assert isinstance(prompt_embeds, torch.Tensor)
         return prompt_embeds
@@ -180,7 +189,7 @@ class Sd3TextEncoderInvocation(BaseInvocation):
                     f" {tokenizer_max_length} tokens: {removed_text}"
                 )
             prompt_embeds = clip_text_encoder(
-                input_ids=text_input_ids.to(TorchDevice.choose_torch_device()), output_hidden_states=True
+                input_ids=text_input_ids.to(clip_text_encoder.device), output_hidden_states=True
             )
             pooled_prompt_embeds = prompt_embeds[0]
             prompt_embeds = prompt_embeds.hidden_states[-2]
