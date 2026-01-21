@@ -97,9 +97,7 @@ async def get_current_user_or_default(
 
     if user is None or not user.is_active:
         # User doesn't exist or is inactive - fall back to system user
-        logger.warning(
-            f"User {token_data.user_id} does not exist or is inactive, falling back to system user"
-        )
+        logger.warning(f"User {token_data.user_id} does not exist or is inactive, falling back to system user")
         return TokenData(user_id="system", email="system@system.invokeai", is_admin=False)
 
     return token_data

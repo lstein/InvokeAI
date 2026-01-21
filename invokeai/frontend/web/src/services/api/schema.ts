@@ -2053,7 +2053,7 @@ export type paths = {
         };
         /**
          * Get Client State By Key
-         * @description Gets the client state for the current user
+         * @description Gets the client state for the current user (or system user if not authenticated)
          */
         get: operations["get_client_state_by_key"];
         put?: never;
@@ -2075,7 +2075,7 @@ export type paths = {
         put?: never;
         /**
          * Set Client State
-         * @description Sets the client state for the current user
+         * @description Sets the client state for the current user (or system user if not authenticated)
          */
         post: operations["set_client_state"];
         delete?: never;
@@ -2095,7 +2095,7 @@ export type paths = {
         put?: never;
         /**
          * Delete Client State
-         * @description Deletes the client state for the current user
+         * @description Deletes the client state for the current user (or system user if not authenticated)
          */
         post: operations["delete_client_state"];
         delete?: never;
