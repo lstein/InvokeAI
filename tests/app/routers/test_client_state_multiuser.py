@@ -88,25 +88,55 @@ def user2_token(monkeypatch: Any, mock_invoker: Invoker, client: TestClient, adm
     return get_user_token(client, "user2@test.com")
 
 
-def test_get_client_state_requires_auth(client: TestClient):
-    """Test that getting client state requires authentication."""
+def test_get_client_state_without_auth_uses_system_user(client: TestClient, monkeypatch, mock_invoker: Invoker):
+    """Test that getting client state without authentication uses the system user."""
+    # Mock ApiDependencies
+    monkeypatch.setattr("invokeai.app.api.auth_dependencies.ApiDependencies", MockApiDependencies(mock_invoker))
+    monkeypatch.setattr("invokeai.app.api.routers.client_state.ApiDependencies", MockApiDependencies(mock_invoker))
+
+    # Set a value for the system user directly
+    mock_invoker.services.client_state_persistence.set_by_key("system", "test_key", "system_value")
+
+    # Get without authentication - should return system user's value
     response = client.get("/api/v1/client_state/default/get_by_key?key=test_key")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == "system_value"
 
 
-def test_set_client_state_requires_auth(client: TestClient):
-    """Test that setting client state requires authentication."""
+def test_set_client_state_without_auth_uses_system_user(client: TestClient, monkeypatch, mock_invoker: Invoker):
+    """Test that setting client state without authentication uses the system user."""
+    # Mock ApiDependencies
+    monkeypatch.setattr("invokeai.app.api.auth_dependencies.ApiDependencies", MockApiDependencies(mock_invoker))
+    monkeypatch.setattr("invokeai.app.api.routers.client_state.ApiDependencies", MockApiDependencies(mock_invoker))
+
+    # Set without authentication - should set for system user
     response = client.post(
         "/api/v1/client_state/default/set_by_key?key=test_key",
-        json="test_value",
+        json="unauthenticated_value",
     )
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify it was set for system user
+    value = mock_invoker.services.client_state_persistence.get_by_key("system", "test_key")
+    assert value == "unauthenticated_value"
 
 
-def test_delete_client_state_requires_auth(client: TestClient):
-    """Test that deleting client state requires authentication."""
+def test_delete_client_state_without_auth_uses_system_user(client: TestClient, monkeypatch, mock_invoker: Invoker):
+    """Test that deleting client state without authentication uses the system user."""
+    # Mock ApiDependencies
+    monkeypatch.setattr("invokeai.app.api.auth_dependencies.ApiDependencies", MockApiDependencies(mock_invoker))
+    monkeypatch.setattr("invokeai.app.api.routers.client_state.ApiDependencies", MockApiDependencies(mock_invoker))
+
+    # Set a value for system user
+    mock_invoker.services.client_state_persistence.set_by_key("system", "test_key", "system_value")
+
+    # Delete without authentication - should delete system user's data
     response = client.post("/api/v1/client_state/default/delete")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.status_code == status.HTTP_200_OK
+
+    # Verify it was deleted for system user
+    value = mock_invoker.services.client_state_persistence.get_by_key("system", "test_key")
+    assert value is None
 
 
 def test_set_and_get_client_state(client: TestClient, admin_token: str):
