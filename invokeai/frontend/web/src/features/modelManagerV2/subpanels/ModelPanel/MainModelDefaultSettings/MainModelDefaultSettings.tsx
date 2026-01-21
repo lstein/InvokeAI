@@ -18,6 +18,7 @@ import type { MainModelConfig } from 'services/api/types';
 
 import { DefaultCfgRescaleMultiplier } from './DefaultCfgRescaleMultiplier';
 import { DefaultCfgScale } from './DefaultCfgScale';
+import { DefaultCpuOnly } from './DefaultCpuOnly';
 import { DefaultGuidance } from './DefaultGuidance';
 import { DefaultScheduler } from './DefaultScheduler';
 import { DefaultSteps } from './DefaultSteps';
@@ -39,6 +40,7 @@ export type MainModelDefaultSettingsFormData = {
   width: FormField<number>;
   height: FormField<number>;
   guidance: FormField<number>;
+  cpuOnly: FormField<boolean>;
 };
 
 type Props = {
@@ -84,6 +86,7 @@ export const MainModelDefaultSettings = memo(({ modelConfig }: Props) => {
         width: data.width.isEnabled ? data.width.value : null,
         height: data.height.isEnabled ? data.height.value : null,
         guidance: data.guidance.isEnabled ? data.guidance.value : null,
+        cpu_only: data.cpuOnly.isEnabled ? data.cpuOnly.value : null,
       };
 
       updateModel({
@@ -140,6 +143,7 @@ export const MainModelDefaultSettings = memo(({ modelConfig }: Props) => {
         {!isFlux && <DefaultCfgRescaleMultiplier control={control} name="cfgRescaleMultiplier" />}
         <DefaultWidth control={control} optimalDimension={optimalDimension} />
         <DefaultHeight control={control} optimalDimension={optimalDimension} />
+        <DefaultCpuOnly control={control} name="cpuOnly" />
       </SimpleGrid>
     </>
   );

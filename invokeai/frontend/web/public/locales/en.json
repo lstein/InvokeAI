@@ -949,6 +949,8 @@
         "convertToDiffusersHelpText4": "This is a one time process only. It might take around 30s-60s depending on the specifications of your computer.",
         "convertToDiffusersHelpText5": "Please make sure you have enough disk space. Models generally vary between 2GB-7GB in size.",
         "convertToDiffusersHelpText6": "Do you wish to convert this model?",
+        "cpuOnly": "CPU Only",
+        "runOnCpu": "Run model on CPU only",
         "noDefaultSettings": "No default settings configured for this model. Visit the Model Manager to add default settings.",
         "defaultSettings": "Default Settings",
         "defaultSettingsSaved": "Default Settings Saved",
