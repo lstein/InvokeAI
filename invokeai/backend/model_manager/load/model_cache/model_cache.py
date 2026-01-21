@@ -438,8 +438,13 @@ class ModelCache:
             f"Locking model {cache_entry.key} (Type: {cache_entry.cached_model.model.__class__.__name__})"
         )
 
-        if self._execution_device.type == "cpu":
-            # Models don't need to be loaded into VRAM if we're running on CPU.
+        # Check if the model's specific compute_device is CPU, not just the cache's default execution_device
+        model_compute_device = cache_entry.cached_model.compute_device
+        if model_compute_device.type == "cpu":
+            # Models configured for CPU execution don't need to be loaded into VRAM
+            self._logger.debug(
+                f"Model {cache_entry.key} is configured for CPU execution, skipping VRAM load"
+            )
             return
 
         try:
@@ -521,9 +526,11 @@ class ModelCache:
         model_cur_vram_bytes = cache_entry.cached_model.cur_vram_bytes()
         vram_available = self._get_vram_available(working_mem_bytes)
         loaded_percent = model_cur_vram_bytes / model_total_bytes if model_total_bytes > 0 else 0
+        # Use the model's actual compute_device for logging, not the cache's default
+        model_device = cache_entry.cached_model.compute_device
         self._logger.info(
             f"Loaded model '{cache_entry.key}' ({cache_entry.cached_model.model.__class__.__name__}) onto "
-            f"{self._execution_device.type} device in {(time.time() - start_time):.2f}s. "
+            f"{model_device.type} device in {(time.time() - start_time):.2f}s. "
             f"Total model size: {model_total_bytes / MB:.2f}MB, "
             f"VRAM: {model_cur_vram_bytes / MB:.2f}MB ({loaded_percent:.1%})"
         )
