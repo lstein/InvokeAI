@@ -78,6 +78,11 @@ class ModelLoader(ModelLoaderBase):
         if hasattr(config, "default_settings") and config.default_settings is not None:
             if hasattr(config.default_settings, "cpu_only") and config.default_settings.cpu_only is True:
                 return torch.device("cpu")
+        
+        # Check if this model config directly has cpu_only field (T5Encoder, Qwen3Encoder, etc.)
+        if hasattr(config, "cpu_only") and config.cpu_only is True:
+            return torch.device("cpu")
+        
         return None
 
     def _load_and_cache(self, config: AnyModelConfig, submodel_type: Optional[SubModelType] = None) -> CacheRecord:

@@ -117,7 +117,7 @@ class Sd3TextEncoderInvocation(BaseInvocation):
                     f" {max_seq_len} tokens: {removed_text}"
                 )
 
-            prompt_embeds = t5_text_encoder(text_input_ids.to(TorchDevice.choose_torch_device()))[0]
+            prompt_embeds = t5_text_encoder(text_input_ids.to(t5_text_encoder.device))[0]
 
         assert isinstance(prompt_embeds, torch.Tensor)
         return prompt_embeds
@@ -180,7 +180,7 @@ class Sd3TextEncoderInvocation(BaseInvocation):
                     f" {tokenizer_max_length} tokens: {removed_text}"
                 )
             prompt_embeds = clip_text_encoder(
-                input_ids=text_input_ids.to(TorchDevice.choose_torch_device()), output_hidden_states=True
+                input_ids=text_input_ids.to(clip_text_encoder.device), output_hidden_states=True
             )
             pooled_prompt_embeds = prompt_embeds[0]
             prompt_embeds = prompt_embeds.hidden_states[-2]

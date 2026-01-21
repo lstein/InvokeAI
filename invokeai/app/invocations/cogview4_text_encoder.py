@@ -85,7 +85,7 @@ class CogView4TextEncoderInvocation(BaseInvocation):
                 )
                 text_input_ids = torch.cat([pad_ids, text_input_ids], dim=1)
             prompt_embeds = glm_text_encoder(
-                text_input_ids.to(TorchDevice.choose_torch_device()), output_hidden_states=True
+                text_input_ids.to(glm_text_encoder.device), output_hidden_states=True
             ).hidden_states[-2]
 
         assert isinstance(prompt_embeds, torch.Tensor)

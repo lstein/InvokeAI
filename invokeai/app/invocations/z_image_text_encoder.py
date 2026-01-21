@@ -69,7 +69,6 @@ class ZImageTextEncoderInvocation(BaseInvocation):
         Based on the ZImagePipeline._encode_prompt method from diffusers.
         """
         prompt = self.prompt
-        device = TorchDevice.choose_torch_device()
 
         text_encoder_info = context.models.load(self.qwen3_encoder.text_encoder)
         tokenizer_info = context.models.load(self.qwen3_encoder.tokenizer)
@@ -77,6 +76,9 @@ class ZImageTextEncoderInvocation(BaseInvocation):
         with ExitStack() as exit_stack:
             (_, text_encoder) = exit_stack.enter_context(text_encoder_info.model_on_device())
             (_, tokenizer) = exit_stack.enter_context(tokenizer_info.model_on_device())
+
+            # Use the device that the text_encoder is actually on
+            device = text_encoder.device
 
             # Apply LoRA models to the text encoder
             lora_dtype = TorchDevice.choose_bfloat16_safe_dtype(device)
