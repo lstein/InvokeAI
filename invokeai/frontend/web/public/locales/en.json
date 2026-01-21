@@ -2052,7 +2052,7 @@
       "heading": "CPU Only",
       "paragraphs": [
         "When enabled, this model will run on CPU instead of GPU.",
-        "This can be useful for conserving VRAM when using multiple models, though it will be slower than GPU execution."
+        "Useful for large models that exceed GPU memory limits or when running multiple models simultaneously. Note that CPU execution will be slower than GPU execution."
       ]
     }
   },
