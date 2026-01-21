@@ -5,6 +5,8 @@ from logging import Logger
 from pathlib import Path
 from typing import Optional
 
+import torch
+
 from invokeai.app.services.config import InvokeAIAppConfig
 from invokeai.backend.model_manager.configs.base import Diffusers_Config_Base
 from invokeai.backend.model_manager.configs.factory import AnyModelConfig
@@ -66,6 +68,18 @@ class ModelLoader(ModelLoaderBase):
         model_base = self._app_config.models_path
         return (model_base / config.path).resolve()
 
+    def _get_execution_device(self, config: AnyModelConfig) -> Optional[torch.device]:
+        """Determine the execution device for a model based on its configuration.
+        
+        Returns:
+            torch.device("cpu") if the model should run on CPU only, None otherwise (use cache default).
+        """
+        # Check if this is a main model with default settings that specify cpu_only
+        if hasattr(config, "default_settings") and config.default_settings is not None:
+            if hasattr(config.default_settings, "cpu_only") and config.default_settings.cpu_only is True:
+                return torch.device("cpu")
+        return None
+
     def _load_and_cache(self, config: AnyModelConfig, submodel_type: Optional[SubModelType] = None) -> CacheRecord:
         stats_name = ":".join([config.base, config.type, config.name, (submodel_type or "")])
         try:
@@ -77,9 +91,13 @@ class ModelLoader(ModelLoaderBase):
         self._ram_cache.make_room(self.get_size_fs(config, Path(config.path), submodel_type))
         loaded_model = self._load_model(config, submodel_type)
 
+        # Determine execution device from model config
+        execution_device = self._get_execution_device(config)
+
         self._ram_cache.put(
             get_model_cache_key(config.key, submodel_type),
             model=loaded_model,
+            execution_device=execution_device,
         )
 
         return self._ram_cache.get(key=get_model_cache_key(config.key, submodel_type), stats_name=stats_name)

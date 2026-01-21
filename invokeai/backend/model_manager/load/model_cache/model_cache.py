@@ -316,8 +316,15 @@ class ModelCache:
 
     @synchronized
     @record_activity
-    def put(self, key: str, model: AnyModel) -> None:
-        """Add a model to the cache."""
+    def put(self, key: str, model: AnyModel, execution_device: Optional[torch.device] = None) -> None:
+        """Add a model to the cache.
+        
+        Args:
+            key: Cache key for the model
+            model: The model to cache
+            execution_device: Optional device to use for this specific model. If None, uses the cache's default
+                execution_device. Use torch.device("cpu") to force a model to run on CPU.
+        """
         if key in self._cached_models:
             self._logger.debug(
                 f"Attempted to add model {key} ({model.__class__.__name__}), but it already exists in the cache. No action necessary."
@@ -331,20 +338,23 @@ class ModelCache:
         if isinstance(model, torch.nn.Module):
             apply_custom_layers_to_model(model)
 
+        # Use the provided execution device, or fall back to the cache's default
+        effective_execution_device = execution_device if execution_device is not None else self._execution_device
+
         # Partial loading only makes sense on CUDA.
         # - When running on CPU, there is no 'loading' to do.
         # - When running on MPS, memory is shared with the CPU, so the default OS memory management already handles this
         #   well.
-        running_with_cuda = self._execution_device.type == "cuda"
+        running_with_cuda = effective_execution_device.type == "cuda"
 
         # Wrap model.
         if isinstance(model, torch.nn.Module) and running_with_cuda and self._enable_partial_loading:
             wrapped_model = CachedModelWithPartialLoad(
-                model, self._execution_device, keep_ram_copy=self._keep_ram_copy_of_weights
+                model, effective_execution_device, keep_ram_copy=self._keep_ram_copy_of_weights
             )
         else:
             wrapped_model = CachedModelOnlyFullLoad(
-                model, self._execution_device, size, keep_ram_copy=self._keep_ram_copy_of_weights
+                model, effective_execution_device, size, keep_ram_copy=self._keep_ram_copy_of_weights
             )
 
         cache_record = CacheRecord(key=key, cached_model=wrapped_model)
