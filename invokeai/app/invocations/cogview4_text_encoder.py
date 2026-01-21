@@ -37,6 +37,8 @@ class CogView4TextEncoderInvocation(BaseInvocation):
     @torch.no_grad()
     def invoke(self, context: InvocationContext) -> CogView4ConditioningOutput:
         glm_embeds = self._glm_encode(context, max_seq_len=COGVIEW4_GLM_MAX_SEQ_LEN)
+        # Move embeddings to CPU for storage to save VRAM
+        glm_embeds = glm_embeds.detach().to("cpu")
         conditioning_data = ConditioningFieldData(conditionings=[CogView4ConditioningInfo(glm_embeds=glm_embeds)])
         conditioning_name = context.conditioning.save(conditioning_data)
         return CogView4ConditioningOutput.build(conditioning_name)
@@ -85,7 +87,7 @@ class CogView4TextEncoderInvocation(BaseInvocation):
                 )
                 text_input_ids = torch.cat([pad_ids, text_input_ids], dim=1)
             prompt_embeds = glm_text_encoder(
-                text_input_ids.to(TorchDevice.choose_torch_device()), output_hidden_states=True
+                text_input_ids.to(glm_text_encoder.device), output_hidden_states=True
             ).hidden_states[-2]
 
         assert isinstance(prompt_embeds, torch.Tensor)

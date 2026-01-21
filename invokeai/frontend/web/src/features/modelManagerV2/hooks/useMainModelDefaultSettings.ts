@@ -41,6 +41,10 @@ export const useMainModelDefaultSettings = (modelConfig: MainModelConfig) => {
         isEnabled: !isNil(modelConfig?.default_settings?.guidance),
         value: modelConfig?.default_settings?.guidance ?? 4,
       },
+      cpuOnly: {
+        isEnabled: !isNil(modelConfig?.default_settings?.cpu_only),
+        value: modelConfig?.default_settings?.cpu_only ?? false,
+      },
     };
   }, [modelConfig]);
 
