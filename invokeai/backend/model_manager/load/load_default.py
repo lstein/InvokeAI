@@ -70,7 +70,7 @@ class ModelLoader(ModelLoaderBase):
 
     def _get_execution_device(self, config: AnyModelConfig) -> Optional[torch.device]:
         """Determine the execution device for a model based on its configuration.
-        
+
         Returns:
             torch.device("cpu") if the model should run on CPU only, None otherwise (use cache default).
         """

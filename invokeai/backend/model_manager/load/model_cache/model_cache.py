@@ -318,7 +318,7 @@ class ModelCache:
     @record_activity
     def put(self, key: str, model: AnyModel, execution_device: Optional[torch.device] = None) -> None:
         """Add a model to the cache.
-        
+
         Args:
             key: Cache key for the model
             model: The model to cache
