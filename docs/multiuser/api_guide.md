@@ -2,9 +2,23 @@
 
 ## Overview
 
-This guide explains how to interact with InvokeAI's API when multi-user authentication is enabled. It covers authentication, endpoint changes, and best practices for API consumers.
+This guide explains how to interact with InvokeAI's API in both single-user and multi-user modes. The API behavior depends on the `multiuser` configuration setting.
 
-## Authentication
+### Single-User vs Multi-User Mode
+
+**Single-User Mode** (`multiuser: false` or option absent):
+- No authentication required
+- All API endpoints accessible without tokens
+- Direct API access like previous InvokeAI versions
+- All content visible in unified view
+
+**Multi-User Mode** (`multiuser: true`):
+- JWT token authentication required
+- User-scoped access to resources
+- Role-based authorization (admin vs regular user)
+- Data isolation between users
+
+## Authentication (Multi-User Mode Only)
 
 ### Authentication Flow
 
@@ -16,6 +30,9 @@ When multi-user mode is enabled, all API endpoints (except `/api/v1/auth/setup` 
 2. **Store Token**: Save the JWT token securely
 3. **Use Token**: Include token in `Authorization` header for all requests
 4. **Refresh**: Re-authenticate when token expires
+
+!!! note "Single-User Mode"
+    When running in single-user mode (`multiuser: false`), authentication endpoints are not available and authentication headers are not required.
 
 ### Login Endpoint
 
@@ -999,15 +1016,80 @@ boards = client.get_boards()
 
 ### Backward Compatibility
 
-If multi-user mode is disabled (`auth_enabled: false`), the API works without authentication as before.
+InvokeAI supports both single-user and multi-user modes via the `multiuser` configuration option.
 
-**Check Authentication Status:**
+**Configuration:**
+
+```yaml
+# invokeai.yaml
+
+# Single-user mode (no authentication)
+multiuser: false  # or omit the option entirely
+
+# Multi-user mode (authentication required)
+multiuser: true
+```
+
+**Checking Mode Programmatically:**
 
 ```python
-def is_auth_enabled(base_url):
-    """Check if authentication is required."""
+def is_multiuser_enabled(base_url):
+    """Check if multi-user mode is enabled (authentication required)."""
     response = requests.get(f"{base_url}/api/v1/boards/")
-    return response.status_code == 401
+    return response.status_code == 401  # 401 = auth required
+
+# Example usage
+base_url = "http://localhost:9090"
+if is_multiuser_enabled(base_url):
+    print("Multi-user mode: authentication required")
+    # Use authenticated API calls
+else:
+    print("Single-user mode: no authentication needed")
+    # Use direct API calls
+```
+
+**Adaptive Client:**
+
+```python
+class AdaptiveInvokeAIClient:
+    def __init__(self, base_url="http://localhost:9090"):
+        self.base_url = base_url
+        self.token = None
+        self.multiuser_mode = self._check_multiuser_mode()
+    
+    def _check_multiuser_mode(self):
+        """Detect if multi-user mode is enabled."""
+        try:
+            response = requests.get(f"{self.base_url}/api/v1/boards/")
+            return response.status_code == 401
+        except:
+            return False
+    
+    def login(self, email, password):
+        """Login (only needed in multi-user mode)."""
+        if not self.multiuser_mode:
+            print("Single-user mode: login not required")
+            return
+        
+        response = requests.post(
+            f"{self.base_url}/api/v1/auth/login",
+            json={"email": email, "password": password}
+        )
+        self.token = response.json()["token"]
+    
+    def _get_headers(self):
+        """Get headers (with auth token if in multi-user mode)."""
+        if self.multiuser_mode and self.token:
+            return {"Authorization": f"Bearer {self.token}"}
+        return {}
+    
+    def get_boards(self):
+        """Get boards (works in both modes)."""
+        response = requests.get(
+            f"{self.base_url}/api/v1/boards/",
+            headers=self._get_headers()
+        )
+        return response.json()
 ```
 
 ## OpenAPI/Swagger Documentation

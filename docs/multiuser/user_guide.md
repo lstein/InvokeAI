@@ -2,25 +2,48 @@
 
 ## Overview
 
-InvokeAI's multi-user support enables multiple people to use the same InvokeAI instance while keeping their work private and organized. This guide explains how to use InvokeAI in a multi-user environment.
+InvokeAI supports both single-user and multi-user modes. In single-user mode, no login is required and you have access to all features. In multi-user mode, multiple people can use the same InvokeAI instance while keeping their work private and organized.
+
+### Single-User vs Multi-User Mode
+
+**Single-User Mode:**
+- No login required - direct access to InvokeAI
+- All functionality enabled by default
+- All boards and images visible in a unified view
+- Ideal for personal use or trusted environments
+- Enabled when `multiuser: false` in config or option is absent
+
+**Multi-User Mode:**
+- Secure login required for access
+- User isolation for boards, images, and workflows
+- Role-based permissions (Administrator vs Regular User)
+- Ideal for shared servers or team environments
+- Enabled when `multiuser: true` in config
+
+!!! note "Mode Switching"
+    If you switch from multi-user mode to single-user mode, all boards and images from different users will be combined into a single unified view. When switching back to multi-user mode, they will be separated again by user ownership.
 
 ## Getting Started
 
-### First Time Login
+### Accessing InvokeAI
 
-When you first access a multi-user InvokeAI instance:
+**In Single-User Mode:**
+1. Navigate to your InvokeAI URL (e.g., `http://localhost:9090`)
+2. You'll go directly to the InvokeAI interface
+3. No login required - start creating immediately!
 
+**In Multi-User Mode:**
 1. Navigate to your InvokeAI URL (e.g., `http://localhost:9090`)
 2. You'll see the login screen
 3. Enter your email address and password provided by your administrator
 4. Click **Sign In**
 
 !!! tip "Remember Me"
-    Check the "Remember me" box to stay logged in for 7 days. Otherwise, your session will expire after 24 hours.
+    In multi-user mode, check the "Remember me" box to stay logged in for 7 days. Otherwise, your session will expire after 24 hours.
 
-### Initial Setup (First User Only)
+### Initial Setup (First Time in Multi-User Mode)
 
-If you're the first person to access a fresh InvokeAI installation, you'll see the **Administrator Setup** dialog:
+If you're the first person to access a fresh InvokeAI installation in multi-user mode, you'll see the **Administrator Setup** dialog:
 
 1. Enter your email address (this will be your username)
 2. Create a display name
@@ -34,9 +57,9 @@ If you're the first person to access a fresh InvokeAI installation, you'll see t
 
 You'll be automatically logged in as the administrator.
 
-## Understanding Your Role
+## Understanding User Roles (Multi-User Mode Only)
 
-InvokeAI has two user roles:
+In single-user mode, you have access to all features without restrictions. In multi-user mode, InvokeAI has two user roles:
 
 ### Regular User
 
@@ -197,19 +220,16 @@ Your UI preferences are saved to your account:
 
 These settings are stored per-user and won't affect other users.
 
-### Profile Settings
+### Profile Settings (Multi-User Mode)
 
-Access your profile by clicking your name in the top-right corner:
+In multi-user mode, access your profile by clicking your name in the top-right corner:
 
 **Display Name:** Update how your name appears throughout the UI
 
 **Change Password:**
 
-1. Click **Change Password** in your profile menu
-2. Enter your current password
-3. Enter your new password (must meet security requirements)
-4. Confirm your new password
-5. Click **Update Password**
+!!! info "Password Changes"
+    A web-based interface for users to change their own passwords is coming in a future release. Until then, contact your administrator to reset your password if needed.
 
 ## Security Best Practices
 
