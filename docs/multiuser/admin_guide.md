@@ -52,29 +52,49 @@ When InvokeAI starts for the first time in multi-user mode, you'll see the **Adm
 
 ### Configuration
 
-Multi-user support is controlled in your InvokeAI configuration file (`invokeai.yaml`):
+InvokeAI can run in single-user or multi-user mode, controlled by the `multiuser` configuration option in `invokeai.yaml`:
 
 ```yaml
-# Enable/disable authentication
-auth_enabled: true  # Set to false for legacy single-user mode
+# Enable/disable multi-user mode
+multiuser: true   # Enable multi-user mode (requires authentication)
+# multiuser: false  # Single-user mode (no authentication required)
+# If the multiuser option is absent, single-user mode is used
 
 # Database configuration
 use_memory_db: false  # Use persistent database
 db_path: databases/invokeai.db  # Database location
 
-# Session configuration (optional)
+# Session configuration (multi-user mode only)
 jwt_secret_key: "your-secret-key-here"  # Auto-generated if not specified
 jwt_token_expiry_hours: 24  # Default session timeout
 jwt_remember_me_days: 7  # "Remember me" duration
 ```
 
+**Single-User Mode** (`multiuser: false` or option absent):
+- No authentication required
+- All functionality enabled by default
+- All boards and images visible in unified view
+- Ideal for personal use or trusted environments
+
+**Multi-User Mode** (`multiuser: true`):
+- Authentication required for access
+- User isolation for boards, images, and workflows
+- Role-based permissions enforced
+- Ideal for shared servers or team environments
+
+!!! warning "Mode Switching Behavior"
+    **Switching to Single-User Mode:** If boards or images were created in multi-user mode, they will all be combined into a single unified view when switching to single-user mode.
+    
+    **Switching to Multi-User Mode:** Legacy boards and images created under single-user mode will be owned by an internal user named "system." Only the Administrator will have access to these legacy assets. A utility to migrate these legacy assets to another user will be part of a future release.
+
 ### Migration from Single-User
 
-When upgrading from a single-user installation:
+When upgrading from a single-user installation or switching modes:
 
-1. **Automatic Migration**: The database will automatically migrate to multi-user schema
-2. **Data Ownership**: Existing data (boards, images, workflows) is assigned to the first administrator account
-3. **No Data Loss**: All existing content is preserved
+1. **Automatic Migration**: The database will automatically migrate to multi-user schema when multi-user mode is first enabled
+2. **Legacy Data Ownership**: Existing data (boards, images, workflows) created in single-user mode is assigned to an internal user named "system"
+3. **Administrator Access**: Only administrators will have access to legacy "system"-owned assets when in multi-user mode
+4. **No Data Loss**: All existing content is preserved
 
 **Migration Process:**
 
@@ -82,108 +102,160 @@ When upgrading from a single-user installation:
 # Backup your database first
 cp databases/invokeai.db databases/invokeai.db.backup
 
+# Enable multi-user mode in invokeai.yaml
+# multiuser: true
+
 # Start InvokeAI (migration happens automatically)
 invokeai-web
 
 # Complete the administrator setup dialog
-# Your existing data is now owned by your admin account
+# Legacy data will be owned by "system" user
 ```
+
+!!! note "Legacy Asset Migration"
+    A utility to migrate legacy "system"-owned assets to specific user accounts will be available in a future release. Until then, administrators can access and manage all legacy content.
 
 ## User Management
 
 ### Creating Users
 
-**Via Web Interface:**
+**Via Web Interface (Coming Soon):**
 
-1. Log in as an administrator
-2. Navigate to **Admin** → **User Management**
-3. Click **Create New User**
-4. Fill in the user details:
-   - Email address (required, must be unique)
-   - Display name (required)
-   - Temporary password (required)
-   - Administrator checkbox (optional)
-5. Click **Create User**
+!!! info "Web UI for User Management"
+    A web-based user interface that allows administrators to manage users is coming in a future release. Until then, use the command-line scripts described below.
 
-**Via Command Line:**
+**Via Command Line Scripts:**
+
+InvokeAI provides several command-line scripts in the `scripts/` directory for user management:
+
+**useradd.py** - Add a new user:
 
 ```bash
+# Interactive mode (prompts for details)
+python scripts/useradd.py
+
 # Create a regular user
-python scripts/add_user.py \
+python scripts/useradd.py \
   --email user@example.com \
   --password TempPass123 \
   --name "User Name"
 
 # Create an administrator
-python scripts/add_user.py \
+python scripts/useradd.py \
   --email admin@example.com \
   --password AdminPass123 \
   --name "Admin Name" \
   --admin
 ```
 
-!!! tip "Initial Passwords"
-    Create temporary passwords and instruct users to change them on first login.
+**userlist.py** - List all users:
+
+```bash
+# List all users
+python scripts/userlist.py
+
+# Show detailed information
+python scripts/userlist.py --verbose
+```
+
+**usermod.py** - Modify an existing user:
+
+```bash
+# Change display name
+python scripts/usermod.py --email user@example.com --name "New Name"
+
+# Promote to administrator
+python scripts/usermod.py --email user@example.com --admin
+
+# Demote from administrator
+python scripts/usermod.py --email user@example.com --no-admin
+
+# Deactivate account
+python scripts/usermod.py --email user@example.com --deactivate
+
+# Reactivate account
+python scripts/usermod.py --email user@example.com --activate
+
+# Change password
+python scripts/usermod.py --email user@example.com --password NewPassword123
+```
+
+**userdel.py** - Delete a user:
+
+```bash
+# Delete a user (prompts for confirmation)
+python scripts/userdel.py --email user@example.com
+
+# Delete without confirmation
+python scripts/userdel.py --email user@example.com --force
+```
+
+!!! tip "Script Usage"
+    Run any script with `--help` to see all available options:
+    ```bash
+    python scripts/useradd.py --help
+    ```
+
+!!! warning "Command Line Management"
+    - These scripts directly modify the database
+    - Always backup your database before making changes
+    - Changes take effect immediately (users may need to log in again)
+    - Deleting a user permanently removes all their content
 
 ### Editing Users
 
-**Update User Information:**
+**Via Command Line:**
 
-1. Go to **Admin** → **User Management**
-2. Click on a user to view details
-3. Modify fields:
-   - Display name
-   - Email address (use with caution)
-   - Active status (enable/disable account)
-   - Administrator role
-4. Click **Save Changes**
-
-**Promote/Demote Administrators:**
-
-1. Select the user in User Management
-2. Toggle the **Administrator** checkbox
-3. Save changes
+Use `usermod.py` as described above to modify user properties.
 
 !!! warning "Last Administrator"
     You cannot remove admin privileges from the last remaining administrator account.
 
 ### Resetting User Passwords
 
-**As Administrator:**
+**Via Web Interface (Coming Soon):**
 
-1. Navigate to **Admin** → **User Management**
-2. Click on the user
-3. Click **Reset Password**
-4. Enter a new temporary password
-5. Click **Confirm**
-6. Communicate the new password to the user securely
+Web-based password reset functionality for administrators is coming in a future release.
 
-**Security Note:** Never send passwords via email or unsecured channels.
+**Via Command Line:**
+
+```bash
+# Reset a user's password
+python scripts/usermod.py --email user@example.com --password NewTempPassword123
+```
+
+**Security Note:** Never send passwords via email or unsecured channels. Use secure communication methods.
 
 ### Deactivating Users
 
-**To temporarily disable a user account:**
+**Via Command Line:**
 
-1. Go to **Admin** → **User Management**
-2. Select the user
-3. Uncheck **Active** status
-4. Save changes
+```bash
+# Deactivate a user account
+python scripts/usermod.py --email user@example.com --deactivate
+
+# Reactivate a user account
+python scripts/usermod.py --email user@example.com --activate
+```
 
 **Effects:**
 
-- User cannot log in
+- User cannot log in when deactivated
 - Existing sessions are immediately invalidated
 - User's data is preserved
 - Can be reactivated at any time
 
 ### Deleting Users
 
-**To permanently remove a user:**
+**Via Command Line:**
 
-1. Go to **Admin** → **User Management**
-2. Select the user
-3. Click **Delete User**
-4. Confirm the deletion
+```bash
+# Delete a user (prompts for confirmation)
+python scripts/userdel.py --email user@example.com
+
+# Delete without confirmation prompt
+python scripts/userdel.py --email user@example.com --force
+```
 
 **Important:**
 
