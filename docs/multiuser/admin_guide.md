@@ -904,8 +904,6 @@ When reporting administrator issues, include:
 - [User Guide](user_guide.md) - For end users
 - [API Guide](api_guide.md) - For API consumers
 - [Multiuser Specification](specification.md) - Technical details
-- [Implementation Plan](implementation_plan.md) - Development roadmap
-- [Security Testing](phase7_testing.md) - Security validation
 
 ---
 
