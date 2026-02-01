@@ -13,9 +13,6 @@ import shutil
 import sqlite3
 from pathlib import Path
 
-import PIL
-import PIL.ImageOps
-import PIL.PngImagePlugin
 import yaml
 
 
@@ -261,6 +258,9 @@ class PhysicalFileMapper:
         return glob.glob(thumbnails_directory + "/*.webp", recursive=False)
 
     def generate_thumbnail_for_image_name(self, image_filename):  # noqa D102
+        # Import PIL here to avoid module shadowing issues when script is run directly
+        import PIL.Image
+
         # create thumbnail
         file_path = self.get_image_path_for_image_name(image_filename)
         thumb_path = self.get_thumbnail_path_for_image(image_filename)
