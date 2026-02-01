@@ -382,6 +382,7 @@ export const modelsApi = api.injectEndpoints({
         url: buildModelsUrl('sync/orphaned'),
         method: 'GET',
       }),
+      providesTags: ['OrphanedModels'],
     }),
     deleteOrphanedModels: build.mutation<DeleteOrphanedModelsResponse, DeleteOrphanedModelsArg>({
       query: (arg) => ({
@@ -389,6 +390,7 @@ export const modelsApi = api.injectEndpoints({
         method: 'DELETE',
         body: arg,
       }),
+      invalidatesTags: ['OrphanedModels'],
     }),
   }),
 });
