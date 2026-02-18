@@ -3,6 +3,7 @@ from typing import Any
 from starlette.exceptions import HTTPException
 from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 
 class NoCacheStaticFiles(StaticFiles):
@@ -32,7 +33,7 @@ class NoCacheStaticFiles(StaticFiles):
         resp.headers.setdefault("Expires", self.expires)
         return resp
 
-    async def get_response(self, path: str, scope: Any) -> Response:
+    async def get_response(self, path: str, scope: Scope) -> Response:
         """
         Override get_response to implement SPA routing.
         
