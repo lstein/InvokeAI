@@ -80,7 +80,7 @@ export const AdministratorSetup = memo(() => {
         if (result.success) {
           // Auto-login after setup - need to call login API
           // For now, just redirect to login page
-          window.location.hash = '#/login';
+          window.location.href = '/#/login';
         }
       } catch {
         // Error is handled by RTK Query and displayed via error state
