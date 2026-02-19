@@ -7,7 +7,7 @@ import { createStore } from 'app/store/store';
 import Loading from 'common/components/Loading/Loading';
 import React, { lazy, memo, useEffect, useState } from 'react';
 import { Provider } from 'react-redux';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 
 /*
  * We need to configure logging before anything else happens - useLayoutEffect ensures we set this at the first
@@ -52,11 +52,11 @@ const InvokeAIUI = () => {
   return (
     <React.StrictMode>
       <Provider store={store}>
-        <BrowserRouter>
+        <HashRouter>
           <React.Suspense fallback={<Loading />}>
             <App />
           </React.Suspense>
-        </BrowserRouter>
+        </HashRouter>
       </Provider>
     </React.StrictMode>
   );

@@ -61,7 +61,7 @@ export const LoginPage = memo(() => {
         dispatch(setCredentials({ token: result.token, user }));
         // Force a page reload to ensure all user-specific state is loaded from server
         // This is important for multiuser isolation to prevent state leakage
-        window.location.href = '/app';
+        window.location.hash = '#/app';
       } catch {
         // Error is handled by RTK Query and displayed via error state
       }
