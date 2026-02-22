@@ -292,24 +292,32 @@ class SqliteSessionQueue(SessionQueueBase):
             is_full = cast(int, cursor.fetchone()[0]) >= max_queue_size
         return IsFullResult(is_full=is_full)
 
-    def clear(self, queue_id: str) -> ClearResult:
+    def clear(self, queue_id: str, user_id: Optional[str] = None) -> ClearResult:
         with self._db.transaction() as cursor:
+            user_filter = "AND user_id = ?" if user_id is not None else ""
+            where = f"""--sql
+                WHERE queue_id = ?
+                {user_filter}
+                """
+            params: list[str] = [queue_id]
+            if user_id is not None:
+                params.append(user_id)
             cursor.execute(
-                """--sql
+                f"""--sql
                 SELECT COUNT(*)
                 FROM session_queue
-                WHERE queue_id = ?
+                {where}
                 """,
-                (queue_id,),
+                tuple(params),
             )
             count = cursor.fetchone()[0]
             cursor.execute(
-                """--sql
+                f"""--sql
                 DELETE
                 FROM session_queue
-                WHERE queue_id = ?
+                {where}
                 """,
-                (queue_id,),
+                tuple(params),
             )
         self.__invoker.services.events.emit_queue_cleared(queue_id)
         return ClearResult(deleted=count)
