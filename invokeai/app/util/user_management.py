@@ -12,7 +12,14 @@ called from the command line after installing the package:
 import argparse
 import getpass
 import json
+import os
 import sys
+
+_root_help = (
+    "Path to the InvokeAI root directory. If omitted, the root is resolved in this order: "
+    "the $INVOKEAI_ROOT environment variable, the active virtual environment's parent directory, "
+    "or $HOME/invokeai."
+)
 
 # ---------------------------------------------------------------------------
 # useradd
@@ -129,12 +136,16 @@ def useradd() -> None:
         description="Add a user to the InvokeAI database",
         epilog="If no arguments are provided, the script will run in interactive mode.",
     )
+    parser.add_argument("--root", "-r", help=_root_help)
     parser.add_argument("--email", "-e", help="User email address")
     parser.add_argument("--password", "-p", help="User password")
     parser.add_argument("--name", "-n", help="User display name (optional)")
     parser.add_argument("--admin", "-a", action="store_true", help="Make user an administrator")
 
     args = parser.parse_args()
+
+    if args.root:
+        os.environ["INVOKEAI_ROOT"] = args.root
 
     if args.email or args.password:
         if not args.email or not args.password:
@@ -255,10 +266,14 @@ def userdel() -> None:
         description="Delete a user from the InvokeAI database",
         epilog="If no arguments are provided, the script will run in interactive mode.",
     )
+    parser.add_argument("--root", "-r", help=_root_help)
     parser.add_argument("--email", "-e", help="User email address")
     parser.add_argument("--force", "-f", action="store_true", help="Delete without confirmation prompt")
 
     args = parser.parse_args()
+
+    if args.root:
+        os.environ["INVOKEAI_ROOT"] = args.root
 
     if args.email:
         success = _delete_user_cli(args.email, args.force)
@@ -358,6 +373,7 @@ Examples:
   invoke-userlist --json
         """,
     )
+    parser.add_argument("--root", "-r", help=_root_help)
     parser.add_argument(
         "--json",
         action="store_true",
@@ -365,6 +381,9 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    if args.root:
+        os.environ["INVOKEAI_ROOT"] = args.root
 
     success = _list_users_json() if args.json else _list_users_table()
     sys.exit(0 if success else 1)
@@ -532,6 +551,7 @@ def usermod() -> None:
         description="Modify a user in the InvokeAI database",
         epilog="If no arguments are provided, the script will run in interactive mode.",
     )
+    parser.add_argument("--root", "-r", help=_root_help)
     parser.add_argument("--email", "-e", help="User email address")
     parser.add_argument("--name", "-n", help="New display name")
     parser.add_argument("--password", "-p", help="New password")
@@ -541,6 +561,9 @@ def usermod() -> None:
     admin_group.add_argument("--no-admin", dest="no_admin", action="store_true", help="Remove administrator privileges")
 
     args = parser.parse_args()
+
+    if args.root:
+        os.environ["INVOKEAI_ROOT"] = args.root
 
     is_admin = None
     if args.admin:
