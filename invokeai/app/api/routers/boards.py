@@ -74,7 +74,15 @@ async def update_board(
     board_id: str = Path(description="The id of board to update"),
     changes: BoardChanges = Body(description="The changes to apply to the board"),
 ) -> BoardDTO:
-    """Updates a board (user must have access to it)"""
+    """Updates a board (user must own it, or be an admin)"""
+    try:
+        board = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if not current_user.is_admin and board.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this board")
+
     try:
         result = ApiDependencies.invoker.services.boards.update(board_id=board_id, changes=changes)
         return result
@@ -88,7 +96,15 @@ async def delete_board(
     board_id: str = Path(description="The id of board to delete"),
     include_images: Optional[bool] = Query(description="Permanently delete all images on the board", default=False),
 ) -> DeleteBoardResult:
-    """Deletes a board (user must have access to it)"""
+    """Deletes a board (user must own it, or be an admin)"""
+    try:
+        board = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if not current_user.is_admin and board.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this board")
+
     try:
         if include_images is True:
             deleted_images = ApiDependencies.invoker.services.board_images.get_all_board_image_names_for_board(

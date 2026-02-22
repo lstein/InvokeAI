@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from invokeai.app.services.board_image_records.board_image_records_sqlite import SqliteBoardImageRecordStorage
+from invokeai.app.services.board_images.board_images_default import BoardImagesService
 from invokeai.app.services.board_records.board_records_sqlite import SqliteBoardRecordStorage
 from invokeai.app.services.boards.boards_default import BoardService
 from invokeai.app.services.bulk_download.bulk_download_default import BulkDownloadService
@@ -38,7 +39,7 @@ def mock_services() -> InvocationServices:
     # NOTE: none of these are actually called by the test invocations
     return InvocationServices(
         board_image_records=SqliteBoardImageRecordStorage(db=db),
-        board_images=None,  # type: ignore
+        board_images=BoardImagesService(),
         board_records=SqliteBoardRecordStorage(db=db),
         boards=BoardService(),
         bulk_download=BulkDownloadService(),
