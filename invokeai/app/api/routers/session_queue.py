@@ -4,7 +4,7 @@ from fastapi import Body, HTTPException, Path, Query
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 
-from invokeai.app.api.auth_dependencies import AdminUser, CurrentUserOrDefault
+from invokeai.app.api.auth_dependencies import AdminUserOrDefault, CurrentUserOrDefault
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.services.session_processor.session_processor_common import SessionProcessorStatus
 from invokeai.app.services.session_queue.session_queue_common import (
@@ -177,7 +177,7 @@ async def get_queue_items_by_item_ids(
     responses={200: {"model": SessionProcessorStatus}},
 )
 async def resume(
-    current_user: AdminUser,
+    current_user: AdminUserOrDefault,
     queue_id: str = Path(description="The queue id to perform this operation on"),
 ) -> SessionProcessorStatus:
     """Resumes session processor. Admin only."""
@@ -193,7 +193,7 @@ async def resume(
     responses={200: {"model": SessionProcessorStatus}},
 )
 async def Pause(
-    current_user: AdminUser,
+    current_user: AdminUserOrDefault,
     queue_id: str = Path(description="The queue id to perform this operation on"),
 ) -> SessionProcessorStatus:
     """Pauses session processor. Admin only."""
