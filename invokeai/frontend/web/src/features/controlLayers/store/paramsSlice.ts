@@ -6,6 +6,7 @@ import { deepClone } from 'common/util/deepClone';
 import { roundDownToMultiple, roundToMultiple } from 'common/util/roundDownToMultiple';
 import { isPlainObject } from 'es-toolkit';
 import { clamp } from 'es-toolkit/compat';
+import { logout } from 'features/auth/store/authSlice';
 import type { AspectRatioID, InfillMethod, ParamsState, RgbaColor } from 'features/controlLayers/store/types';
 import {
   ASPECT_RATIO_MAP,
@@ -29,6 +30,7 @@ import type {
   ParameterCLIPGEmbedModel,
   ParameterCLIPLEmbedModel,
   ParameterControlLoRAModel,
+  ParameterFluxDypePreset,
   ParameterGuidance,
   ParameterModel,
   ParameterNegativePrompt,
@@ -72,8 +74,26 @@ const slice = createSlice({
     setFluxScheduler: (state, action: PayloadAction<'euler' | 'heun' | 'lcm'>) => {
       state.fluxScheduler = action.payload;
     },
+    setFluxDypePreset: (state, action: PayloadAction<ParameterFluxDypePreset>) => {
+      state.fluxDypePreset = action.payload;
+    },
+    setFluxDypeScale: (state, action: PayloadAction<number>) => {
+      state.fluxDypeScale = action.payload;
+    },
+    setFluxDypeExponent: (state, action: PayloadAction<number>) => {
+      state.fluxDypeExponent = action.payload;
+    },
     setZImageScheduler: (state, action: PayloadAction<'euler' | 'heun' | 'lcm'>) => {
       state.zImageScheduler = action.payload;
+    },
+    setZImageSeedVarianceEnabled: (state, action: PayloadAction<boolean>) => {
+      state.zImageSeedVarianceEnabled = action.payload;
+    },
+    setZImageSeedVarianceStrength: (state, action: PayloadAction<number>) => {
+      state.zImageSeedVarianceStrength = action.payload;
+    },
+    setZImageSeedVarianceRandomizePercent: (state, action: PayloadAction<number>) => {
+      state.zImageSeedVarianceRandomizePercent = action.payload;
     },
     setUpscaleScheduler: (state, action: PayloadAction<ParameterScheduler>) => {
       state.upscaleScheduler = action.payload;
@@ -190,6 +210,23 @@ const slice = createSlice({
         return;
       }
       state.zImageQwen3SourceModel = result.data;
+    },
+    kleinVaeModelSelected: (state, action: PayloadAction<ParameterVAEModel | null>) => {
+      const result = zParamsState.shape.kleinVaeModel.safeParse(action.payload);
+      if (!result.success) {
+        return;
+      }
+      state.kleinVaeModel = result.data;
+    },
+    kleinQwen3EncoderModelSelected: (
+      state,
+      action: PayloadAction<{ key: string; name: string; base: string } | null>
+    ) => {
+      const result = zParamsState.shape.kleinQwen3EncoderModel.safeParse(action.payload);
+      if (!result.success) {
+        return;
+      }
+      state.kleinQwen3EncoderModel = result.data;
     },
     vaePrecisionChanged: (state, action: PayloadAction<ParameterPrecision>) => {
       state.vaePrecision = action.payload;
@@ -392,6 +429,12 @@ const slice = createSlice({
     },
     paramsReset: (state) => resetState(state),
   },
+  extraReducers(builder) {
+    // Reset params state on logout to prevent user data leakage when switching users
+    builder.addCase(logout, () => {
+      return getInitialParamsState();
+    });
+  },
 });
 
 const applyClipSkip = (state: { clipSkip: number }, model: ParameterModel | null, clipSkip: number) => {
@@ -437,6 +480,8 @@ const resetState = (state: ParamsState): ParamsState => {
   newState.zImageVaeModel = oldState.zImageVaeModel;
   newState.zImageQwen3EncoderModel = oldState.zImageQwen3EncoderModel;
   newState.zImageQwen3SourceModel = oldState.zImageQwen3SourceModel;
+  newState.kleinVaeModel = oldState.kleinVaeModel;
+  newState.kleinQwen3EncoderModel = oldState.kleinQwen3EncoderModel;
   return newState;
 };
 
@@ -456,7 +501,13 @@ export const {
   setGuidance,
   setScheduler,
   setFluxScheduler,
+  setFluxDypePreset,
+  setFluxDypeScale,
+  setFluxDypeExponent,
   setZImageScheduler,
+  setZImageSeedVarianceEnabled,
+  setZImageSeedVarianceStrength,
+  setZImageSeedVarianceRandomizePercent,
   setUpscaleScheduler,
   setUpscaleCfgScale,
   setSeed,
@@ -475,6 +526,8 @@ export const {
   zImageVaeModelSelected,
   zImageQwen3EncoderModelSelected,
   zImageQwen3SourceModelSelected,
+  kleinVaeModelSelected,
+  kleinQwen3EncoderModelSelected,
   setClipSkip,
   shouldUseCpuNoiseChanged,
   setColorCompensation,
@@ -540,6 +593,7 @@ export const selectIsFLUX = createParamsSelector((params) => params.model?.base 
 export const selectIsSD3 = createParamsSelector((params) => params.model?.base === 'sd-3');
 export const selectIsCogView4 = createParamsSelector((params) => params.model?.base === 'cogview4');
 export const selectIsZImage = createParamsSelector((params) => params.model?.base === 'z-image');
+export const selectIsFlux2 = createParamsSelector((params) => params.model?.base === 'flux2');
 export const selectIsFluxKontext = createParamsSelector((params) => {
   if (params.model?.base === 'flux' && params.model?.name.toLowerCase().includes('kontext')) {
     return true;
@@ -560,6 +614,8 @@ export const selectCLIPGEmbedModel = createParamsSelector((params) => params.cli
 export const selectZImageVaeModel = createParamsSelector((params) => params.zImageVaeModel);
 export const selectZImageQwen3EncoderModel = createParamsSelector((params) => params.zImageQwen3EncoderModel);
 export const selectZImageQwen3SourceModel = createParamsSelector((params) => params.zImageQwen3SourceModel);
+export const selectKleinVaeModel = createParamsSelector((params) => params.kleinVaeModel);
+export const selectKleinQwen3EncoderModel = createParamsSelector((params) => params.kleinQwen3EncoderModel);
 
 export const selectCFGScale = createParamsSelector((params) => params.cfgScale);
 export const selectGuidance = createParamsSelector((params) => params.guidance);
@@ -597,7 +653,15 @@ export const selectModelSupportsOptimizedDenoising = createSelector(
 );
 export const selectScheduler = createParamsSelector((params) => params.scheduler);
 export const selectFluxScheduler = createParamsSelector((params) => params.fluxScheduler);
+export const selectFluxDypePreset = createParamsSelector((params) => params.fluxDypePreset);
+export const selectFluxDypeScale = createParamsSelector((params) => params.fluxDypeScale);
+export const selectFluxDypeExponent = createParamsSelector((params) => params.fluxDypeExponent);
 export const selectZImageScheduler = createParamsSelector((params) => params.zImageScheduler);
+export const selectZImageSeedVarianceEnabled = createParamsSelector((params) => params.zImageSeedVarianceEnabled);
+export const selectZImageSeedVarianceStrength = createParamsSelector((params) => params.zImageSeedVarianceStrength);
+export const selectZImageSeedVarianceRandomizePercent = createParamsSelector(
+  (params) => params.zImageSeedVarianceRandomizePercent
+);
 export const selectSeamlessXAxis = createParamsSelector((params) => params.seamlessXAxis);
 export const selectSeamlessYAxis = createParamsSelector((params) => params.seamlessYAxis);
 export const selectSeed = createParamsSelector((params) => params.seed);

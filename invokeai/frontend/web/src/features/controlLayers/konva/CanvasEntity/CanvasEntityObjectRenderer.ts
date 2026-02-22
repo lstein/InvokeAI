@@ -8,6 +8,7 @@ import { CanvasObjectBrushLine } from 'features/controlLayers/konva/CanvasObject
 import { CanvasObjectBrushLineWithPressure } from 'features/controlLayers/konva/CanvasObject/CanvasObjectBrushLineWithPressure';
 import { CanvasObjectEraserLine } from 'features/controlLayers/konva/CanvasObject/CanvasObjectEraserLine';
 import { CanvasObjectEraserLineWithPressure } from 'features/controlLayers/konva/CanvasObject/CanvasObjectEraserLineWithPressure';
+import { CanvasObjectGradient } from 'features/controlLayers/konva/CanvasObject/CanvasObjectGradient';
 import { CanvasObjectImage } from 'features/controlLayers/konva/CanvasObject/CanvasObjectImage';
 import { CanvasObjectRect } from 'features/controlLayers/konva/CanvasObject/CanvasObjectRect';
 import type { AnyObjectRenderer, AnyObjectState } from 'features/controlLayers/konva/CanvasObject/types';
@@ -401,6 +402,16 @@ export class CanvasEntityObjectRenderer extends CanvasModuleBase {
       }
 
       didRender = renderer.update(objectState, force || isFirstRender);
+    } else if (objectState.type === 'gradient') {
+      assert(renderer instanceof CanvasObjectGradient || !renderer);
+
+      if (!renderer) {
+        renderer = new CanvasObjectGradient(objectState, this);
+        this.renderers.set(renderer.id, renderer);
+        this.konva.objectGroup.add(renderer.konva.group);
+      }
+
+      didRender = renderer.update(objectState, force || isFirstRender);
     } else if (objectState.type === 'image') {
       assert(renderer instanceof CanvasObjectImage || !renderer);
 
@@ -434,8 +445,9 @@ export class CanvasEntityObjectRenderer extends CanvasModuleBase {
     for (const renderer of this.renderers.values()) {
       const isEraserLine = renderer instanceof CanvasObjectEraserLine;
       const isImage = renderer instanceof CanvasObjectImage;
+      const imageIgnoresTransparency = isImage && renderer.state.usePixelBbox === false;
       const hasClip = renderer instanceof CanvasObjectBrushLine && renderer.state.clip;
-      if (isEraserLine || hasClip || isImage) {
+      if (isEraserLine || hasClip || (isImage && !imageIgnoresTransparency)) {
         needsPixelBbox = true;
         break;
       }
@@ -556,37 +568,67 @@ export class CanvasEntityObjectRenderer extends CanvasModuleBase {
     this.rasterCacheKeys.clear();
   };
 
-  cloneObjectGroup = (arg: { attrs?: GroupConfig } = {}): Konva.Group => {
-    const { attrs } = arg;
+  cloneObjectGroup = (
+    arg: { attrs?: GroupConfig; cache?: { pixelRatio?: number; imageSmoothingEnabled?: boolean } } = {}
+  ): Konva.Group => {
+    const { attrs, cache } = arg;
     const clone = this.konva.objectGroup.clone();
     if (attrs) {
       clone.setAttrs(attrs);
     }
     if (clone.hasChildren()) {
-      clone.cache({ pixelRatio: 1, imageSmoothingEnabled: false });
+      const { pixelRatio = 1, imageSmoothingEnabled = false } = cache ?? {};
+      clone.cache({ pixelRatio, imageSmoothingEnabled });
     }
     return clone;
   };
 
-  getCanvas = (arg: { rect?: Rect; attrs?: GroupConfig; bg?: string } = {}): HTMLCanvasElement => {
-    const { rect, attrs, bg } = arg;
-    const clone = this.cloneObjectGroup({ attrs });
-    const canvas = konvaNodeToCanvas({ node: clone, rect, bg });
+  getCanvas = (
+    arg: {
+      rect?: Rect;
+      attrs?: GroupConfig;
+      bg?: string;
+      imageSmoothingEnabled?: boolean;
+      pixelRatio?: number;
+      cache?: { pixelRatio?: number; imageSmoothingEnabled?: boolean };
+    } = {}
+  ): HTMLCanvasElement => {
+    const { rect, attrs, bg, imageSmoothingEnabled, pixelRatio, cache } = arg;
+    const clone = this.cloneObjectGroup({ attrs, cache });
+    const canvas = konvaNodeToCanvas({ node: clone, rect, bg, imageSmoothingEnabled, pixelRatio });
     clone.destroy();
     return canvas;
   };
 
-  getBlob = async (arg: { rect?: Rect; attrs?: GroupConfig; bg?: string } = {}): Promise<Blob> => {
-    const { rect, attrs, bg } = arg;
-    const clone = this.cloneObjectGroup({ attrs });
-    const blob = await konvaNodeToBlob({ node: clone, rect, bg });
+  getBlob = async (
+    arg: {
+      rect?: Rect;
+      attrs?: GroupConfig;
+      bg?: string;
+      imageSmoothingEnabled?: boolean;
+      pixelRatio?: number;
+      cache?: { pixelRatio?: number; imageSmoothingEnabled?: boolean };
+    } = {}
+  ): Promise<Blob> => {
+    const { rect, attrs, bg, imageSmoothingEnabled, pixelRatio, cache } = arg;
+    const clone = this.cloneObjectGroup({ attrs, cache });
+    const blob = await konvaNodeToBlob({ node: clone, rect, bg, imageSmoothingEnabled, pixelRatio });
     return blob;
   };
 
-  getImageData = (arg: { rect?: Rect; attrs?: GroupConfig; bg?: string } = {}): ImageData => {
-    const { rect, attrs, bg } = arg;
-    const clone = this.cloneObjectGroup({ attrs });
-    const imageData = konvaNodeToImageData({ node: clone, rect, bg });
+  getImageData = (
+    arg: {
+      rect?: Rect;
+      attrs?: GroupConfig;
+      bg?: string;
+      imageSmoothingEnabled?: boolean;
+      pixelRatio?: number;
+      cache?: { pixelRatio?: number; imageSmoothingEnabled?: boolean };
+    } = {}
+  ): ImageData => {
+    const { rect, attrs, bg, imageSmoothingEnabled, pixelRatio, cache } = arg;
+    const clone = this.cloneObjectGroup({ attrs, cache });
+    const imageData = konvaNodeToImageData({ node: clone, rect, bg, imageSmoothingEnabled, pixelRatio });
     clone.destroy();
     return imageData;
   };

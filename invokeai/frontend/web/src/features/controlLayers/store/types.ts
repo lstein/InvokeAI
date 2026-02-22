@@ -9,6 +9,9 @@ import {
   zParameterCLIPGEmbedModel,
   zParameterCLIPLEmbedModel,
   zParameterControlLoRAModel,
+  zParameterFluxDypeExponent,
+  zParameterFluxDypePreset,
+  zParameterFluxDypeScale,
   zParameterFluxScheduler,
   zParameterGuidance,
   zParameterImageDimension,
@@ -102,7 +105,7 @@ const zIPMethodV2 = z.enum(['full', 'style', 'composition', 'style_strong', 'sty
 export type IPMethodV2 = z.infer<typeof zIPMethodV2>;
 export const isIPMethodV2 = (v: unknown): v is IPMethodV2 => zIPMethodV2.safeParse(v).success;
 
-const _zTool = z.enum(['brush', 'eraser', 'move', 'rect', 'view', 'bbox', 'colorPicker']);
+const _zTool = z.enum(['brush', 'eraser', 'move', 'rect', 'gradient', 'view', 'bbox', 'colorPicker', 'text']);
 export type Tool = z.infer<typeof _zTool>;
 
 const zPoints = z.array(z.number()).refine((points) => points.length % 2 === 0, {
@@ -257,10 +260,47 @@ const zCanvasRectState = z.object({
 });
 export type CanvasRectState = z.infer<typeof zCanvasRectState>;
 
+// Gradient state includes clip metadata so the tool can optionally clip to drag gesture.
+const zCanvasLinearGradientState = z.object({
+  id: zId,
+  type: z.literal('gradient'),
+  gradientType: z.literal('linear'),
+  rect: zRect,
+  start: zCoordinate,
+  end: zCoordinate,
+  clipCenter: zCoordinate,
+  clipRadius: z.number().min(0),
+  clipAngle: z.number(),
+  clipEnabled: z.boolean().default(true),
+  bboxRect: zRect,
+  fgColor: zRgbaColor,
+  bgColor: zRgbaColor,
+});
+const zCanvasRadialGradientState = z.object({
+  id: zId,
+  type: z.literal('gradient'),
+  gradientType: z.literal('radial'),
+  rect: zRect,
+  center: zCoordinate,
+  radius: z.number().min(0),
+  clipCenter: zCoordinate,
+  clipRadius: z.number().min(0),
+  clipEnabled: z.boolean().default(true),
+  bboxRect: zRect,
+  fgColor: zRgbaColor,
+  bgColor: zRgbaColor,
+});
+const zCanvasGradientState = z.discriminatedUnion('gradientType', [
+  zCanvasLinearGradientState,
+  zCanvasRadialGradientState,
+]);
+export type CanvasGradientState = z.infer<typeof zCanvasGradientState>;
+
 const zCanvasImageState = z.object({
   id: zId,
   type: z.literal('image'),
   image: z.union([zImageWithDims, zImageWithDimsDataURL]),
+  usePixelBbox: z.boolean().optional(),
 });
 export type CanvasImageState = z.infer<typeof zCanvasImageState>;
 
@@ -271,6 +311,7 @@ const zCanvasObjectState = z.union([
   zCanvasRectState,
   zCanvasBrushLineWithPressureState,
   zCanvasEraserLineWithPressureState,
+  zCanvasGradientState,
 ]);
 export type CanvasObjectState = z.infer<typeof zCanvasObjectState>;
 
@@ -322,6 +363,13 @@ const zFluxKontextReferenceImageConfig = z.object({
 });
 export type FluxKontextReferenceImageConfig = z.infer<typeof zFluxKontextReferenceImageConfig>;
 
+// FLUX.2 Klein has built-in reference image support - no separate model needed
+const zFlux2ReferenceImageConfig = z.object({
+  type: z.literal('flux2_reference_image'),
+  image: zCroppableImageWithDims.nullable(),
+});
+export type Flux2ReferenceImageConfig = z.infer<typeof zFlux2ReferenceImageConfig>;
+
 const zCanvasEntityBase = z.object({
   id: zId,
   name: zName,
@@ -332,7 +380,12 @@ const zCanvasEntityBase = z.object({
 export const zRefImageState = z.object({
   id: zId,
   isEnabled: z.boolean().default(true),
-  config: z.discriminatedUnion('type', [zIPAdapterConfig, zFLUXReduxConfig, zFluxKontextReferenceImageConfig]),
+  config: z.discriminatedUnion('type', [
+    zIPAdapterConfig,
+    zFLUXReduxConfig,
+    zFluxKontextReferenceImageConfig,
+    zFlux2ReferenceImageConfig,
+  ]),
 });
 export type RefImageState = z.infer<typeof zRefImageState>;
 
@@ -345,6 +398,9 @@ export const isFLUXReduxConfig = (config: RefImageState['config']): config is FL
 export const isFluxKontextReferenceImageConfig = (
   config: RefImageState['config']
 ): config is FluxKontextReferenceImageConfig => config.type === 'flux_kontext_reference_image';
+
+export const isFlux2ReferenceImageConfig = (config: RefImageState['config']): config is Flux2ReferenceImageConfig =>
+  config.type === 'flux2_reference_image';
 
 const zFillStyle = z.enum(['solid', 'grid', 'crosshatch', 'diagonal', 'horizontal', 'vertical']);
 export type FillStyle = z.infer<typeof zFillStyle>;
@@ -465,6 +521,62 @@ const zRasterLayerAdjustments = z.object({
 });
 export type RasterLayerAdjustments = z.infer<typeof zRasterLayerAdjustments>;
 
+/**
+ * Available global composite operations (blend modes) for layers.
+ * These are the standard Canvas 2D composite operations.
+ * @see https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
+ * NOTE: All of these are supported by canvas layers, but not all are supported by CSS blend modes (live rendering).
+ */
+const COMPOSITE_OPERATIONS = [
+  'darken',
+  'multiply',
+  'color-burn',
+  'lighten',
+  'screen',
+  'color-dodge',
+  'lighter',
+  'overlay',
+  'soft-light',
+  'hard-light',
+  'difference',
+  'exclusion',
+  'xor',
+  'hue',
+  'saturation',
+  'color',
+  'luminosity',
+  'source-over',
+  'source-in',
+  'source-out',
+  'source-atop',
+  'destination-over',
+  'destination-in',
+  'destination-out',
+  'destination-atop',
+  'copy',
+] as const;
+
+export type CompositeOperation = (typeof COMPOSITE_OPERATIONS)[number];
+
+// Subset of color blend modes for UI selection. All are supported by both Konva and CSS.
+export const COLOR_BLEND_MODES: CompositeOperation[] = [
+  'source-over',
+  'darken',
+  'multiply',
+  'color-burn',
+  'lighten',
+  'screen',
+  'color-dodge',
+  'overlay',
+  'soft-light',
+  'hard-light',
+  'difference',
+  'hue',
+  'saturation',
+  'color',
+  'luminosity',
+];
+
 const zCanvasRasterLayerState = zCanvasEntityBase.extend({
   type: z.literal('raster_layer'),
   position: zCoordinate,
@@ -472,6 +584,8 @@ const zCanvasRasterLayerState = zCanvasEntityBase.extend({
   objects: z.array(zCanvasObjectState),
   // Optional per-layer color adjustments (simple + curves). When undefined, no adjustments are applied.
   adjustments: zRasterLayerAdjustments.optional(),
+  // Optional per-layer composite operation. When undefined, defaults to 'source-over'.
+  globalCompositeOperation: z.enum(COMPOSITE_OPERATIONS).optional(),
 });
 export type CanvasRasterLayerState = z.infer<typeof zCanvasRasterLayerState>;
 
@@ -599,6 +713,9 @@ export const zParamsState = z.object({
   iterations: z.number(),
   scheduler: zParameterScheduler,
   fluxScheduler: zParameterFluxScheduler,
+  fluxDypePreset: zParameterFluxDypePreset,
+  fluxDypeScale: zParameterFluxDypeScale,
+  fluxDypeExponent: zParameterFluxDypeExponent,
   zImageScheduler: zParameterZImageScheduler,
   upscaleScheduler: zParameterScheduler,
   upscaleCfgScale: zParameterCFGScale,
@@ -633,6 +750,13 @@ export const zParamsState = z.object({
   zImageVaeModel: zParameterVAEModel.nullable(), // Optional: Separate FLUX VAE
   zImageQwen3EncoderModel: zModelIdentifierField.nullable(), // Optional: Separate Qwen3 Encoder
   zImageQwen3SourceModel: zParameterModel.nullable(), // Diffusers Z-Image model (fallback for VAE/Encoder)
+  // Flux2 Klein model components - uses Qwen3 instead of CLIP+T5
+  kleinVaeModel: zParameterVAEModel.nullable(), // Optional: Separate FLUX.2 VAE for Klein
+  kleinQwen3EncoderModel: zModelIdentifierField.nullable(), // Optional: Separate Qwen3 Encoder for Klein
+  // Z-Image Seed Variance Enhancer settings
+  zImageSeedVarianceEnabled: z.boolean(),
+  zImageSeedVarianceStrength: z.number().min(0).max(2),
+  zImageSeedVarianceRandomizePercent: z.number().min(1).max(100),
   dimensions: zDimensionsState,
 });
 export type ParamsState = z.infer<typeof zParamsState>;
@@ -655,6 +779,9 @@ export const getInitialParamsState = (): ParamsState => ({
   iterations: 1,
   scheduler: 'dpmpp_3m_k',
   fluxScheduler: 'euler',
+  fluxDypePreset: 'off',
+  fluxDypeScale: 2.0,
+  fluxDypeExponent: 2.0,
   zImageScheduler: 'euler',
   upscaleScheduler: 'kdpm_2',
   upscaleCfgScale: 2,
@@ -688,6 +815,11 @@ export const getInitialParamsState = (): ParamsState => ({
   zImageVaeModel: null,
   zImageQwen3EncoderModel: null,
   zImageQwen3SourceModel: null,
+  kleinVaeModel: null,
+  kleinQwen3EncoderModel: null,
+  zImageSeedVarianceEnabled: false,
+  zImageSeedVarianceStrength: 0.1,
+  zImageSeedVarianceRandomizePercent: 50,
   dimensions: {
     width: 512,
     height: 512,
@@ -793,6 +925,7 @@ export type EntityEraserLineAddedPayload = EntityIdentifierPayload<{
   eraserLine: CanvasEraserLineState | CanvasEraserLineWithPressureState;
 }>;
 export type EntityRectAddedPayload = EntityIdentifierPayload<{ rect: CanvasRectState }>;
+export type EntityGradientAddedPayload = EntityIdentifierPayload<{ gradient: CanvasGradientState }>;
 export type EntityRasterizedPayload = EntityIdentifierPayload<{
   imageObject: CanvasImageState;
   position: Coordinate;

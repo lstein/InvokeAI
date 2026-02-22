@@ -6,7 +6,9 @@ Invoke runs on Windows 10+, macOS 14+ and Linux (Ubuntu 20.04+ is well-tested).
 
 Hardware requirements vary significantly depending on model and image output size.
 
-The requirements below are rough guidelines for best performance. GPUs with less VRAM typically still work, if a bit slower. Follow the [Low-VRAM mode guide](./features/low-vram.md) to optimize performance.
+The requirements below are rough guidelines for best performance. GPUs
+with less VRAM typically still work, if a bit slower. Follow the
+[Low-VRAM mode guide](../features/low-vram.md) to optimize performance.
 
 - All Apple Silicon (M1, M2, etc) Macs work, but 16GB+ memory is recommended.
 - AMD GPUs are supported on Linux only. The VRAM requirements are the same as Nvidia GPUs.
@@ -25,11 +27,23 @@ The requirements below are rough guidelines for best performance. GPUs with less
         - Memory: At least 16GB RAM.
         - Disk: 10GB for base installation plus 100GB for models.
 
-    === "FLUX - 1024×1024"
+    === "FLUX.1 - 1024×1024"
 
         - GPU: Nvidia 20xx series or later, 10GB+ VRAM.
         - Memory: At least 32GB RAM.
         - Disk: 10GB for base installation plus 200GB for models.
+
+    === "FLUX.2 Klein 4B - 1024×1024"
+
+        - GPU: Nvidia 30xx series or later, 12GB+ VRAM (e.g. RTX 3090, RTX 4070). FP8 version works with 8GB+ VRAM.
+        - Memory: At least 16GB RAM.
+        - Disk: 10GB for base installation plus 20GB for models (Diffusers format with encoder).
+
+    === "FLUX.2 Klein 9B - 1024×1024"
+
+        - GPU: Nvidia 40xx series, 24GB+ VRAM (e.g. RTX 4090). FP8 version works with 12GB+ VRAM.
+        - Memory: At least 32GB RAM.
+        - Disk: 10GB for base installation plus 40GB for models (Diffusers format with encoder).
 
     === "Z-Image Turbo - 1024x1024"
         - GPU: Nvidia 20xx series or later, 8GB+ VRAM for the Q4_K quantized model. 16GB+ needed for the Q8 or BF16 models.
