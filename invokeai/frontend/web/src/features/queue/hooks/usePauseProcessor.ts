@@ -4,6 +4,7 @@ import { selectCurrentUser } from 'features/auth/store/authSlice';
 import { toast } from 'features/toast/toast';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useGetSetupStatusQuery } from 'services/api/endpoints/auth';
 import { useGetQueueStatusQuery, usePauseProcessorMutation } from 'services/api/endpoints/queue';
 import { $isConnected } from 'services/events/stores';
 
@@ -12,12 +13,18 @@ export const usePauseProcessor = () => {
   const isConnected = useStore($isConnected);
   const { data: queueStatus } = useGetQueueStatusQuery();
   const currentUser = useAppSelector(selectCurrentUser);
+  const { data: setupStatus } = useGetSetupStatusQuery();
   const [_trigger, { isLoading }] = usePauseProcessorMutation({
     fixedCacheKey: 'pauseProcessor',
   });
 
-  // Only admin users can pause the processor
-  const isAdmin = useMemo(() => currentUser?.is_admin ?? false, [currentUser]);
+  // In single-user mode, treat as admin. In multiuser mode, check is_admin flag.
+  const isAdmin = useMemo(() => {
+    if (setupStatus && !setupStatus.multiuser_enabled) {
+      return true;
+    }
+    return currentUser?.is_admin ?? false;
+  }, [setupStatus, currentUser]);
 
   const trigger = useCallback(async () => {
     try {

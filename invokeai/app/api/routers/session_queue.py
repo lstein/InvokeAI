@@ -192,7 +192,7 @@ async def resume(
     operation_id="pause",
     responses={200: {"model": SessionProcessorStatus}},
 )
-async def Pause(
+async def pause(
     current_user: AdminUserOrDefault,
     queue_id: str = Path(description="The queue id to perform this operation on"),
 ) -> SessionProcessorStatus:
