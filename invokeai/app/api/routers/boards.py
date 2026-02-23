@@ -53,9 +53,13 @@ async def get_board(
 
     try:
         result = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
-        return result
     except Exception:
         raise HTTPException(status_code=404, detail="Board not found")
+
+    if not current_user.is_admin and result.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to access this board")
+
+    return result
 
 
 @boards_router.patch(
@@ -76,6 +80,14 @@ async def update_board(
 ) -> BoardDTO:
     """Updates a board (user must have access to it)"""
     try:
+        board = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if not current_user.is_admin and board.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this board")
+
+    try:
         result = ApiDependencies.invoker.services.boards.update(board_id=board_id, changes=changes)
         return result
     except Exception:
@@ -89,6 +101,14 @@ async def delete_board(
     include_images: Optional[bool] = Query(description="Permanently delete all images on the board", default=False),
 ) -> DeleteBoardResult:
     """Deletes a board (user must have access to it)"""
+    try:
+        board = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Board not found")
+
+    if not current_user.is_admin and board.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this board")
+
     try:
         if include_images is True:
             deleted_images = ApiDependencies.invoker.services.board_images.get_all_board_image_names_for_board(
@@ -155,11 +175,21 @@ async def list_boards(
     response_model=list[str],
 )
 async def list_all_board_image_names(
+    current_user: CurrentUserOrDefault,
     board_id: str = Path(description="The id of the board or 'none' for uncategorized images"),
     categories: list[ImageCategory] | None = Query(default=None, description="The categories of image to include."),
     is_intermediate: bool | None = Query(default=None, description="Whether to list intermediate images."),
 ) -> list[str]:
     """Gets a list of images for a board"""
+
+    if board_id != "none":
+        try:
+            board = ApiDependencies.invoker.services.boards.get_dto(board_id=board_id)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Board not found")
+
+        if not current_user.is_admin and board.user_id != current_user.user_id:
+            raise HTTPException(status_code=403, detail="Not authorized to access this board")
 
     image_names = ApiDependencies.invoker.services.board_images.get_all_board_image_names_for_board(
         board_id,
