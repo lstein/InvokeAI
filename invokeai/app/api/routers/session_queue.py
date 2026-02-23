@@ -328,7 +328,7 @@ async def clear(
     current_user: CurrentUserOrDefault,
     queue_id: str = Path(description="The queue id to perform this operation on"),
 ) -> ClearResult:
-    """Clears the queue entirely. If there's a currently-executing item, users can only cancel it if they own it or are an admin."""
+    """Clears the queue entirely. Admin users clear all items; non-admin users only clear their own items. If there's a currently-executing item, users can only cancel it if they own it or are an admin."""
     try:
         queue_item = ApiDependencies.invoker.services.session_queue.get_current(queue_id)
         if queue_item is not None:
@@ -338,7 +338,9 @@ async def clear(
                     status_code=403, detail="You do not have permission to cancel the currently executing queue item"
                 )
             ApiDependencies.invoker.services.session_queue.cancel_queue_item(queue_item.item_id)
-        clear_result = ApiDependencies.invoker.services.session_queue.clear(queue_id)
+        # Admin users can clear all items, non-admin users can only clear their own
+        user_id = None if current_user.is_admin else current_user.user_id
+        clear_result = ApiDependencies.invoker.services.session_queue.clear(queue_id, user_id=user_id)
         return clear_result
     except HTTPException:
         raise

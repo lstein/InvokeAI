@@ -53,8 +53,8 @@ class SessionQueueBase(ABC):
         pass
 
     @abstractmethod
-    def clear(self, queue_id: str) -> ClearResult:
-        """Deletes all session queue items"""
+    def clear(self, queue_id: str, user_id: Optional[str] = None) -> ClearResult:
+        """Deletes all session queue items. If user_id is provided, only clears items owned by that user."""
         pass
 
     @abstractmethod

@@ -1646,7 +1646,7 @@ export type paths = {
         get?: never;
         /**
          * Clear
-         * @description Clears the queue entirely. If there's a currently-executing item, users can only cancel it if they own it or are an admin.
+         * @description Clears the queue entirely. Admin users clear all items; non-admin users only clear their own items. If there's a currently-executing item, users can only cancel it if they own it or are an admin.
          */
         put: operations["clear"];
         post?: never;
