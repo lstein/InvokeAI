@@ -22,8 +22,8 @@ export const ProtectedRoute = memo(({ children, requireAdmin = false }: PropsWit
   const { data: setupStatus } = useGetSetupStatusQuery();
   const multiuserEnabled = setupStatus?.multiuser_enabled ?? true; // Default to true for safety
 
-  // Only fetch user if we have a token but no user data
-  const shouldFetchUser = isAuthenticated && token && !user;
+  // Only fetch user if we have a token but no user data, and multiuser mode is enabled
+  const shouldFetchUser = multiuserEnabled && isAuthenticated && token && !user;
   const {
     data: currentUser,
     isLoading: isLoadingUser,
@@ -57,6 +57,10 @@ export const ProtectedRoute = memo(({ children, requireAdmin = false }: PropsWit
   useEffect(() => {
     // If multiuser is disabled, allow access without authentication
     if (!multiuserEnabled) {
+      // Clear any persisted auth state when switching to single-user mode
+      if (isAuthenticated) {
+        dispatch(logout());
+      }
       return;
     }
 
@@ -66,7 +70,7 @@ export const ProtectedRoute = memo(({ children, requireAdmin = false }: PropsWit
     } else if (!isLoadingUser && isAuthenticated && user && requireAdmin && !user.is_admin) {
       navigate('/', { replace: true });
     }
-  }, [isAuthenticated, isLoadingUser, requireAdmin, user, navigate, multiuserEnabled]);
+  }, [isAuthenticated, isLoadingUser, requireAdmin, user, navigate, multiuserEnabled, dispatch]);
 
   // In single-user mode, always allow access
   if (!multiuserEnabled) {
