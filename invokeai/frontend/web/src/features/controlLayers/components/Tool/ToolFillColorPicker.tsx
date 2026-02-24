@@ -101,7 +101,8 @@ export const ToolFillColorPicker = memo(() => {
       returnFocusOnClose={true}
     >
       <PopoverTrigger>
-        <Flex role="button"
+        <Flex
+          role="button"
           aria-label={t('controlLayers.fill.fillColor')}
           tabIndex={-1}
           minW={8}

@@ -1,4 +1,4 @@
-import { Badge, Box, Flex, IconButton, Progress, Text, Tooltip } from '@invoke-ai/ui-library';
+import { Badge, Box, Flex, IconButton, Progress, Text } from '@invoke-ai/ui-library';
 import { IAITooltip } from 'common/components/IAITooltip';
 import { isNil } from 'es-toolkit/compat';
 import { getApiErrorDetail } from 'features/modelManagerV2/util/getApiErrorDetail';
@@ -252,7 +252,10 @@ export const ModelInstallQueueItem = memo((props: ModelListItemProps) => {
   return (
     <>
       <Flex gap={1} w="full" alignItems="center">
-        <IAITooltip maxW={600} label={<TooltipLabel name={modelName} source={sourceLocation} installJob={installJob} />}>
+        <IAITooltip
+          maxW={600}
+          label={<TooltipLabel name={modelName} source={sourceLocation} installJob={installJob} />}
+        >
           <Flex gap={3} w="full" alignItems="center">
             <Text w={96} whiteSpace="nowrap" overflow="hidden" textOverflow="ellipsis">
               {modelName}
