@@ -2,6 +2,7 @@ import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/ad
 import { extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import { reorderWithEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/util/reorder-with-edge';
 import { Box, Button, Collapse, Divider, Flex, IconButton } from '@invoke-ai/ui-library';
+import { logger } from 'app/logging/logger';
 import { useAppDispatch, useAppSelector, useAppStore } from 'app/store/storeHooks';
 import { useImageUploadButton } from 'common/hooks/useImageUploadButton';
 import { colorTokenToCssVar } from 'common/util/colorTokenToCssVar';
@@ -93,6 +94,8 @@ export const RefImageList = memo(() => {
         flushSync(() => {
           dispatch(refImagesReordered({ ids: reorderedIds }));
         });
+
+        logger('dnd').info({ reorderedIds }, 'Ref images reordered');
 
         const element = document.querySelector(`[data-ref-image-id="${sourceData.payload.id}"]`);
         if (element instanceof HTMLElement) {
