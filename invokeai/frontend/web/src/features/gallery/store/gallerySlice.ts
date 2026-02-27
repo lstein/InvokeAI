@@ -182,6 +182,6 @@ export const gallerySliceConfig: SliceConfig<typeof slice> = {
       }
       return zGalleryState.parse(state);
     },
-    persistDenylist: ['selection', 'selectedBoardId', 'galleryView', 'imageToCompare'],
+    persistDenylist: ['selection', 'galleryView', 'imageToCompare'],
   },
 };
