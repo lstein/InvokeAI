@@ -2,6 +2,7 @@ import { useAppSelector } from 'app/store/storeHooks';
 import { selectCurrentUser } from 'features/auth/store/authSlice';
 import { useCurrentQueueItemId } from 'features/queue/hooks/useCurrentQueueItemId';
 import { useCallback, useMemo } from 'react';
+import { useGetSetupStatusQuery } from 'services/api/endpoints/auth';
 import { useGetCurrentQueueItemQuery } from 'services/api/endpoints/queue';
 
 import { useCancelQueueItem } from './useCancelQueueItem';
@@ -11,9 +12,15 @@ export const useCancelCurrentQueueItem = () => {
   const { data: currentQueueItem } = useGetCurrentQueueItemQuery();
   const currentUser = useAppSelector(selectCurrentUser);
   const cancelQueueItem = useCancelQueueItem();
+  const { data: setupStatus } = useGetSetupStatusQuery();
+  const multiuserEnabled = setupStatus?.multiuser_enabled ?? true;
 
   // Check if current user can cancel the current item
   const canCancelCurrentItem = useMemo(() => {
+    // In single-user mode, allow cancelling the current item (no user ownership check needed)
+    if (!multiuserEnabled) {
+      return !!currentQueueItem;
+    }
     if (!currentUser || !currentQueueItem) {
       return false;
     }
@@ -23,7 +30,7 @@ export const useCancelCurrentQueueItem = () => {
     }
     // Non-admin users can only cancel their own items
     return currentQueueItem.user_id === currentUser.user_id;
-  }, [currentUser, currentQueueItem]);
+  }, [currentUser, currentQueueItem, multiuserEnabled]);
 
   const trigger = useCallback(
     (options?: { withToast?: boolean }) => {
