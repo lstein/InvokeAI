@@ -1,5 +1,6 @@
 """Tests for multiuser workflow library functionality."""
 
+import logging
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -9,8 +10,13 @@ from fastapi.testclient import TestClient
 
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.app.api_app import app
+from invokeai.app.services.config.config_default import InvokeAIAppConfig
+from invokeai.app.services.invocation_services import InvocationServices
 from invokeai.app.services.invoker import Invoker
 from invokeai.app.services.users.users_common import UserCreateRequest
+from invokeai.app.services.workflow_records.workflow_records_sqlite import SqliteWorkflowRecordsStorage
+from invokeai.backend.util.logging import InvokeAILogger
+from tests.fixtures.sqlite_database import create_mock_sqlite_database
 
 
 class MockApiDependencies(ApiDependencies):
@@ -28,7 +34,7 @@ WORKFLOW_BODY = {
     "contact": "",
     "tags": "",
     "notes": "",
-    "nodes": {},
+    "nodes": [],
     "edges": [],
     "exposedFields": [],
     "meta": {"version": "3.0.0", "category": "user"},
@@ -47,6 +53,60 @@ def setup_jwt_secret():
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+@pytest.fixture
+def mock_services() -> InvocationServices:
+    from invokeai.app.services.board_image_records.board_image_records_sqlite import SqliteBoardImageRecordStorage
+    from invokeai.app.services.board_records.board_records_sqlite import SqliteBoardRecordStorage
+    from invokeai.app.services.boards.boards_default import BoardService
+    from invokeai.app.services.bulk_download.bulk_download_default import BulkDownloadService
+    from invokeai.app.services.client_state_persistence.client_state_persistence_sqlite import (
+        ClientStatePersistenceSqlite,
+    )
+    from invokeai.app.services.image_records.image_records_sqlite import SqliteImageRecordStorage
+    from invokeai.app.services.images.images_default import ImageService
+    from invokeai.app.services.invocation_cache.invocation_cache_memory import MemoryInvocationCache
+    from invokeai.app.services.invocation_stats.invocation_stats_default import InvocationStatsService
+    from invokeai.app.services.users.users_default import UserService
+    from tests.test_nodes import TestEventService
+
+    configuration = InvokeAIAppConfig(use_memory_db=True, node_cache_size=0)
+    logger = InvokeAILogger.get_logger()
+    db = create_mock_sqlite_database(configuration, logger)
+
+    return InvocationServices(
+        board_image_records=SqliteBoardImageRecordStorage(db=db),
+        board_images=None,  # type: ignore
+        board_records=SqliteBoardRecordStorage(db=db),
+        boards=BoardService(),
+        bulk_download=BulkDownloadService(),
+        configuration=configuration,
+        events=TestEventService(),
+        image_files=None,  # type: ignore
+        image_records=SqliteImageRecordStorage(db=db),
+        images=ImageService(),
+        invocation_cache=MemoryInvocationCache(max_cache_size=0),
+        logger=logging,  # type: ignore
+        model_images=None,  # type: ignore
+        model_manager=None,  # type: ignore
+        download_queue=None,  # type: ignore
+        names=None,  # type: ignore
+        performance_statistics=InvocationStatsService(),
+        session_processor=None,  # type: ignore
+        session_queue=None,  # type: ignore
+        urls=None,  # type: ignore
+        workflow_records=SqliteWorkflowRecordsStorage(db=db),
+        tensors=None,  # type: ignore
+        conditioning=None,  # type: ignore
+        style_preset_records=None,  # type: ignore
+        style_preset_image_files=None,  # type: ignore
+        workflow_thumbnails=None,  # type: ignore
+        model_relationship_records=None,  # type: ignore
+        model_relationships=None,  # type: ignore
+        client_state_persistence=ClientStatePersistenceSqlite(db=db),
+        users=UserService(db),
+    )
 
 
 def create_test_user(mock_invoker: Invoker, email: str, display_name: str, is_admin: bool = False) -> str:

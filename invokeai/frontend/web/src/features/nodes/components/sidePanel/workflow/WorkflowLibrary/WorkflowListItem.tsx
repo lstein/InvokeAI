@@ -46,6 +46,10 @@ export const WorkflowListItem = memo(({ workflow }: { workflow: WorkflowRecordLi
     return currentUser !== null && workflow.user_id === currentUser.user_id;
   }, [currentUser, workflow.user_id]);
 
+  const canEditOrDelete = useMemo(() => {
+    return isOwner || (currentUser?.is_admin ?? false);
+  }, [isOwner, currentUser]);
+
   const tags = useMemo(() => {
     if (!workflow.tags) {
       return [];
@@ -160,9 +164,9 @@ export const WorkflowListItem = memo(({ workflow }: { workflow: WorkflowRecordLi
           {workflow.category === 'default' && <ViewWorkflow workflowId={workflow.workflow_id} />}
           {workflow.category !== 'default' && (
             <>
-              <EditWorkflow workflowId={workflow.workflow_id} />
+              {canEditOrDelete && <EditWorkflow workflowId={workflow.workflow_id} />}
               <DownloadWorkflow workflowId={workflow.workflow_id} />
-              <DeleteWorkflow workflowId={workflow.workflow_id} />
+              {canEditOrDelete && <DeleteWorkflow workflowId={workflow.workflow_id} />}
             </>
           )}
         </Flex>

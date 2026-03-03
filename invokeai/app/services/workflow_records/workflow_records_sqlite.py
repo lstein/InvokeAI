@@ -97,15 +97,27 @@ class SqliteWorkflowRecordsStorage(WorkflowRecordsStorageBase):
         return None
 
     def update_is_public(self, workflow_id: str, is_public: bool) -> WorkflowRecordDTO:
-        """Updates the is_public field of a workflow."""
+        """Updates the is_public field of a workflow and manages the 'shared' tag automatically."""
+        record = self.get(workflow_id)
+        workflow = record.workflow
+
+        # Manage "shared" tag: add when public, remove when private
+        tags_list = [t.strip() for t in workflow.tags.split(",") if t.strip()] if workflow.tags else []
+        if is_public and "shared" not in tags_list:
+            tags_list.append("shared")
+        elif not is_public and "shared" in tags_list:
+            tags_list.remove("shared")
+        updated_tags = ", ".join(tags_list)
+        updated_workflow = workflow.model_copy(update={"tags": updated_tags})
+
         with self._db.transaction() as cursor:
             cursor.execute(
                 """--sql
                 UPDATE workflow_library
-                SET is_public = ?
+                SET workflow = ?, is_public = ?
                 WHERE workflow_id = ? AND category = 'user';
                 """,
-                (is_public, workflow_id),
+                (updated_workflow.model_dump_json(), is_public, workflow_id),
             )
         return self.get(workflow_id)
 
