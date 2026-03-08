@@ -8,7 +8,7 @@ import starlightLlmsText from 'starlight-llms-txt';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://invoke-ai.github.io',
-  // base: '/InvokPeAI',
+  base: '/InvokeAI',
   integrations: [
     starlight({
       // Content
