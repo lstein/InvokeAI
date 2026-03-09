@@ -9,7 +9,10 @@ def get_app():
 
 def run_app() -> None:
     """The main entrypoint for the app."""
-    import os
+    import asyncio
+    import sys
+    import threading
+    import traceback
 
     from invokeai.frontend.cli.arg_parser import InvokeAIArgs
 
@@ -106,5 +109,37 @@ def run_app() -> None:
         loop.run_until_complete(server.serve())
     except KeyboardInterrupt:
         logger.info("InvokeAI shutting down...")
-        # Force exit to avoid hanging on non-daemon background threads (e.g. model install service).
-        os._exit(0)
+        # Gracefully shut down services (e.g. model download and install managers) so that any
+        # active work is completed or cleanly cancelled before the process exits.
+        from invokeai.app.api.dependencies import ApiDependencies
+
+        ApiDependencies.shutdown()
+
+        # Cancel any pending asyncio tasks (e.g. socket.io ping tasks) so that loop.close() does
+        # not emit "Task was destroyed but it is pending!" warnings for each one.
+        pending = [t for t in asyncio.all_tasks(loop) if not t.done()]
+        for task in pending:
+            task.cancel()
+        if pending:
+            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
+        # Shut down the asyncio default thread executor. asyncio.to_thread() (used e.g. in the
+        # session queue for SQLite operations during generation) creates non-daemon threads via the
+        # event loop's default ThreadPoolExecutor. Without this call those threads remain alive and
+        # cause threading._shutdown() to hang indefinitely after the process's main code finishes.
+        loop.run_until_complete(loop.shutdown_default_executor())
+        loop.close()
+
+        # After graceful shutdown, log any non-daemon threads that are still alive. These are the
+        # threads that will cause Python's threading._shutdown() to block, preventing the process
+        # from exiting cleanly. This helps identify threads that need to be fixed or joined.
+        frames = sys._current_frames()
+        for thread in threading.enumerate():
+            if thread.daemon or thread is threading.main_thread():
+                continue
+            frame = frames.get(thread.ident)
+            stack = "".join(traceback.format_stack(frame)) if frame else "(no frame available)"
+            logger.warning(
+                f"Non-daemon thread still alive after shutdown: {thread.name!r} "
+                f"(ident={thread.ident})\nStack trace:\n{stack}"
+            )
