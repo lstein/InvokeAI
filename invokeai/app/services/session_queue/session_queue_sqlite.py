@@ -155,22 +155,46 @@ class SqliteSessionQueue(SessionQueueBase):
         return enqueue_result
 
     def dequeue(self) -> Optional[SessionQueueItem]:
+        config = self.__invoker.services.configuration
+        use_round_robin = config.multiuser and config.session_queueing == "round_robin"
         with self._db.transaction() as cursor:
-            cursor.execute(
-                """--sql
-                SELECT
-                    sq.*,
-                    u.display_name as user_display_name,
-                    u.email as user_email
-                FROM session_queue sq
-                LEFT JOIN users u ON sq.user_id = u.user_id
-                WHERE sq.status = 'pending'
-                ORDER BY
-                    sq.priority DESC,
-                    sq.item_id ASC
-                LIMIT 1
-                """
-            )
+            if use_round_robin:
+                cursor.execute(
+                    """--sql
+                    SELECT
+                        sq.*,
+                        u.display_name as user_display_name,
+                        u.email as user_email
+                    FROM (
+                        SELECT *,
+                            (ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY priority DESC, item_id ASC) - 1) AS rr_round,
+                            MIN(item_id) OVER (PARTITION BY user_id) AS user_first_item_id
+                        FROM session_queue
+                        WHERE status = 'pending'
+                    ) sq
+                    LEFT JOIN users u ON sq.user_id = u.user_id
+                    ORDER BY
+                        sq.rr_round ASC,
+                        sq.user_first_item_id ASC
+                    LIMIT 1
+                    """
+                )
+            else:
+                cursor.execute(
+                    """--sql
+                    SELECT
+                        sq.*,
+                        u.display_name as user_display_name,
+                        u.email as user_email
+                    FROM session_queue sq
+                    LEFT JOIN users u ON sq.user_id = u.user_id
+                    WHERE sq.status = 'pending'
+                    ORDER BY
+                        sq.priority DESC,
+                        sq.item_id ASC
+                    LIMIT 1
+                    """
+                )
             result = cast(Union[sqlite3.Row, None], cursor.fetchone())
         if result is None:
             return None

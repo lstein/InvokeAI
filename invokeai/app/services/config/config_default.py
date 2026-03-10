@@ -29,6 +29,7 @@ ATTENTION_TYPE = Literal["auto", "normal", "xformers", "sliced", "torch-sdp"]
 ATTENTION_SLICE_SIZE = Literal["auto", "balanced", "max", 1, 2, 3, 4, 5, 6, 7, 8]
 LOG_FORMAT = Literal["plain", "color", "syslog", "legacy"]
 LOG_LEVEL = Literal["debug", "info", "warning", "error", "critical"]
+SESSION_QUEUEING = Literal["FIFO", "round_robin"]
 CONFIG_SCHEMA_VERSION = "4.0.2"
 
 
@@ -111,6 +112,7 @@ class InvokeAIAppConfig(BaseSettings):
         unsafe_disable_picklescan: UNSAFE. Disable the picklescan security check during model installation. Recommended only for development and testing purposes. This will allow arbitrary code execution during model installation, so should never be used in production.
         allow_unknown_models: Allow installation of models that we are unable to identify. If enabled, models will be marked as `unknown` in the database, and will not have any metadata associated with them. If disabled, unknown models will be rejected during installation.
         multiuser: Enable multiuser support. When disabled, the application runs in single-user mode using a default system account with administrator privileges. When enabled, requires user authentication and authorization.
+        session_queueing: Queue scheduling policy used when dequeuing generation jobs. Valid values: `FIFO` (first-in-first-out, traditional behaviour) or `round_robin` (jobs from each active user are interleaved so no single user can starve others). Only takes effect when `multiuser` is enabled; single-user mode always uses FIFO.
     """
 
     _root: Optional[Path] = PrivateAttr(default=None)
@@ -206,6 +208,7 @@ class InvokeAIAppConfig(BaseSettings):
 
     # MULTIUSER
     multiuser:                     bool = Field(default=False,              description="Enable multiuser support. When disabled, the application runs in single-user mode using a default system account with administrator privileges. When enabled, requires user authentication and authorization.")
+    session_queueing:   SESSION_QUEUEING = Field(default="round_robin",     description="Queue scheduling policy used when dequeuing generation jobs. `FIFO` processes jobs in first-in-first-out order. `round_robin` interleaves jobs across active users so no single user can starve others. Only takes effect when `multiuser` is enabled; single-user mode always uses FIFO.")
 
     # fmt: on
 
