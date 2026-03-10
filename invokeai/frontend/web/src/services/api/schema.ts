@@ -3046,6 +3046,8 @@ export type components = {
              * @description Whether or not the board is archived
              */
             archived?: boolean | null;
+            /** @description The visibility of the board. */
+            board_visibility?: components["schemas"]["BoardVisibility"] | null;
         };
         /**
          * BoardDTO
@@ -3093,6 +3095,11 @@ export type components = {
              */
             archived: boolean;
             /**
+             * @description The visibility of the board.
+             * @default private
+             */
+            board_visibility?: components["schemas"]["BoardVisibility"];
+            /**
              * Image Count
              * @description The number of images in the board.
              */
@@ -3125,6 +3132,12 @@ export type components = {
          * @enum {string}
          */
         BoardRecordOrderBy: "created_at" | "board_name";
+        /**
+         * BoardVisibility
+         * @description The visibility options for a board.
+         * @enum {string}
+         */
+        BoardVisibility: "private" | "shared" | "public";
         /** Body_add_image_to_board */
         Body_add_image_to_board: {
             /**
