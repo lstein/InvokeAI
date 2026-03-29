@@ -12,46 +12,64 @@ from invokeai.app.invocations.fields import (
     UIComponent,
 )
 from invokeai.app.invocations.model import QwenVLEncoderField
-from invokeai.app.invocations.primitives import QwenImageEditConditioningOutput
+from invokeai.app.invocations.primitives import QwenImageConditioningOutput
 from invokeai.app.services.shared.invocation_context import InvocationContext
 from invokeai.backend.model_manager.load.model_cache.utils import get_effective_device
 from invokeai.backend.stable_diffusion.diffusion.conditioning_data import (
     ConditioningFieldData,
-    QwenImageEditConditioningInfo,
+    QwenImageConditioningInfo,
 )
 
-# The Qwen Image Edit pipeline uses a specific system prompt and drops the first
-# N tokens (the system prompt prefix) from the embeddings.  These constants are
-# taken directly from the diffusers QwenImageEditPipeline.
-_SYSTEM_PROMPT = (
+# Prompt templates and drop indices for the two Qwen Image model modes.
+# These are taken directly from the diffusers pipelines.
+
+# Image editing mode (QwenImagePipeline)
+_EDIT_SYSTEM_PROMPT = (
     "Describe the key features of the input image (color, shape, size, texture, objects, background), "
     "then explain how the user's text instruction should alter or modify the image. "
     "Generate a new image that meets the user's requirements while maintaining consistency "
     "with the original input where appropriate."
 )
+_EDIT_DROP_IDX = 64
+
+# Text-to-image mode (QwenImagePipeline)
+_GENERATE_SYSTEM_PROMPT = (
+    "Describe the image by detailing the color, shape, size, texture, quantity, "
+    "text, spatial relationships of the objects and background:"
+)
+_GENERATE_DROP_IDX = 34
+
 _IMAGE_PLACEHOLDER = "<|vision_start|><|image_pad|><|vision_end|>"
-_DROP_IDX = 64
 
 
 def _build_prompt(user_prompt: str, num_images: int) -> str:
-    """Build the full prompt with one vision placeholder per reference image."""
-    image_tokens = _IMAGE_PLACEHOLDER * max(num_images, 1)
-    return (
-        f"<|im_start|>system\n{_SYSTEM_PROMPT}<|im_end|>\n"
-        f"<|im_start|>user\n{image_tokens}{user_prompt}<|im_end|>\n"
-        "<|im_start|>assistant\n"
-    )
+    """Build the full prompt with the appropriate template based on whether reference images are provided."""
+    if num_images > 0:
+        # Edit mode: include vision placeholders for reference images
+        image_tokens = _IMAGE_PLACEHOLDER * num_images
+        return (
+            f"<|im_start|>system\n{_EDIT_SYSTEM_PROMPT}<|im_end|>\n"
+            f"<|im_start|>user\n{image_tokens}{user_prompt}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
+    else:
+        # Generate mode: text-only prompt
+        return (
+            f"<|im_start|>system\n{_GENERATE_SYSTEM_PROMPT}<|im_end|>\n"
+            f"<|im_start|>user\n{user_prompt}<|im_end|>\n"
+            "<|im_start|>assistant\n"
+        )
 
 
 @invocation(
-    "qwen_image_edit_text_encoder",
+    "qwen_image_text_encoder",
     title="Prompt - Qwen Image Edit",
-    tags=["prompt", "conditioning", "qwen_image_edit"],
+    tags=["prompt", "conditioning", "qwen_image"],
     category="conditioning",
     version="1.2.0",
     classification=Classification.Prototype,
 )
-class QwenImageEditTextEncoderInvocation(BaseInvocation):
+class QwenImageTextEncoderInvocation(BaseInvocation):
     """Encodes text and reference images for Qwen Image Edit using Qwen2.5-VL."""
 
     prompt: str = InputField(description="Text prompt describing the desired edit.", ui_component=UIComponent.Textarea)
@@ -92,7 +110,7 @@ class QwenImageEditTextEncoderInvocation(BaseInvocation):
         return image
 
     @torch.no_grad()
-    def invoke(self, context: InvocationContext) -> QwenImageEditConditioningOutput:
+    def invoke(self, context: InvocationContext) -> QwenImageConditioningOutput:
         # Load and resize reference images to ~1M pixels (matching diffusers pipeline)
         pil_images: list[PILImage.Image] = []
         for img_field in self.reference_images:
@@ -105,17 +123,17 @@ class QwenImageEditTextEncoderInvocation(BaseInvocation):
         prompt_mask = prompt_mask.detach().to("cpu") if prompt_mask is not None else None
 
         conditioning_data = ConditioningFieldData(
-            conditionings=[QwenImageEditConditioningInfo(prompt_embeds=prompt_embeds, prompt_embeds_mask=prompt_mask)]
+            conditionings=[QwenImageConditioningInfo(prompt_embeds=prompt_embeds, prompt_embeds_mask=prompt_mask)]
         )
         conditioning_name = context.conditioning.save(conditioning_data)
-        return QwenImageEditConditioningOutput.build(conditioning_name)
+        return QwenImageConditioningOutput.build(conditioning_name)
 
     def _encode(
         self, context: InvocationContext, images: list[PILImage.Image]
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
         """Encode text prompt and reference images using Qwen2.5-VL.
 
-        Matches the diffusers QwenImageEditPipeline._get_qwen_prompt_embeds logic:
+        Matches the diffusers QwenImagePipeline._get_qwen_prompt_embeds logic:
         1. Format prompt with the edit-specific system template
         2. Run through Qwen2.5-VL to get hidden states
         3. Extract valid (non-padding) tokens and drop the system prefix
@@ -188,7 +206,10 @@ class QwenImageEditTextEncoderInvocation(BaseInvocation):
             hidden_states = outputs.hidden_states[-1]
 
             # Extract valid (non-padding) tokens using the attention mask,
-            # then drop the first _DROP_IDX tokens (system prompt prefix).
+            # then drop the system prompt prefix tokens.
+            # The drop index differs between edit mode (64) and generate mode (34).
+            drop_idx = _EDIT_DROP_IDX if images else _GENERATE_DROP_IDX
+
             attn_mask = model_inputs.attention_mask
             bool_mask = attn_mask.bool()
             valid_lengths = bool_mask.sum(dim=1)
@@ -196,7 +217,7 @@ class QwenImageEditTextEncoderInvocation(BaseInvocation):
             split_hidden = torch.split(selected, valid_lengths.tolist(), dim=0)
 
             # Drop system prefix tokens and build padded output
-            trimmed = [h[_DROP_IDX:] for h in split_hidden]
+            trimmed = [h[drop_idx:] for h in split_hidden]
             attn_mask_list = [torch.ones(h.size(0), dtype=torch.long, device=device) for h in trimmed]
             max_seq_len = max(h.size(0) for h in trimmed)
 

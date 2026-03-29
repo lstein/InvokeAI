@@ -28,6 +28,7 @@ from invokeai.backend.model_manager.taxonomy import (
     ModelFormat,
     ModelType,
     ModelVariantType,
+    QwenImageVariantType,
     SchedulerPredictionType,
     SubModelType,
     ZImageVariantType,
@@ -84,7 +85,7 @@ class MainModelDefaultSettings(BaseModel):
                 else:
                     # Distilled models (Klein 4B, Klein 9B) use fewer steps
                     return cls(steps=4, cfg_scale=1.0, width=1024, height=1024)
-            case BaseModelType.QwenImageEdit:
+            case BaseModelType.QwenImage:
                 return cls(steps=40, cfg_scale=4.0, width=1024, height=1024)
             case _:
                 # TODO(psyche): Do we want defaults for other base types?
@@ -1203,10 +1204,11 @@ class Main_GGUF_ZImage_Config(Checkpoint_Config_Base, Main_Config_Base, Config_B
             raise NotAMatchError("state dict does not look like GGUF quantized")
 
 
-class Main_Diffusers_QwenImageEdit_Config(Diffusers_Config_Base, Main_Config_Base, Config_Base):
-    """Model config for Qwen Image Edit 2511 diffusers models."""
+class Main_Diffusers_QwenImage_Config(Diffusers_Config_Base, Main_Config_Base, Config_Base):
+    """Model config for Qwen Image diffusers models (both txt2img and edit)."""
 
-    base: Literal[BaseModelType.QwenImageEdit] = Field(BaseModelType.QwenImageEdit)
+    base: Literal[BaseModelType.QwenImage] = Field(BaseModelType.QwenImage)
+    variant: QwenImageVariantType | None = Field(default=None)
 
     @classmethod
     def from_model_on_disk(cls, mod: ModelOnDisk, override_fields: dict[str, Any]) -> Self:
@@ -1218,19 +1220,37 @@ class Main_Diffusers_QwenImageEdit_Config(Diffusers_Config_Base, Main_Config_Bas
         raise_for_class_name(
             common_config_paths(mod.path),
             {
+                "QwenImagePlusPipeline",
                 "QwenImageEditPlusPipeline",
+                "QwenImagePipeline",
             },
         )
 
         repo_variant = override_fields.get("repo_variant") or cls._get_repo_variant_or_raise(mod)
+        variant = override_fields.get("variant") or cls._get_qwen_image_variant(mod)
 
         return cls(
             **override_fields,
             repo_variant=repo_variant,
+            variant=variant,
         )
 
+    @classmethod
+    def _get_qwen_image_variant(cls, mod: ModelOnDisk) -> QwenImageVariantType:
+        """Detect whether this is an edit or txt2img model from the pipeline class name."""
+        import json
 
-def _has_qwen_image_edit_keys(state_dict: dict[str | int, Any]) -> bool:
+        model_index = mod.path / "model_index.json"
+        if model_index.exists():
+            with open(model_index) as f:
+                config = json.load(f)
+            class_name = config.get("_class_name", "")
+            if "Edit" in class_name:
+                return QwenImageVariantType.Edit
+        return QwenImageVariantType.Generate
+
+
+def _has_qwen_image_keys(state_dict: dict[str | int, Any]) -> bool:
     """Check if state dict contains Qwen Image Edit transformer keys.
 
     Qwen Image Edit uses 'txt_in' and 'txt_norm' instead of 'context_embedder' (FLUX).
@@ -1244,11 +1264,12 @@ def _has_qwen_image_edit_keys(state_dict: dict[str | int, Any]) -> bool:
     return has_txt_in and has_txt_norm and has_img_in and not has_context_embedder
 
 
-class Main_GGUF_QwenImageEdit_Config(Checkpoint_Config_Base, Main_Config_Base, Config_Base):
-    """Model config for GGUF-quantized Qwen Image Edit transformer models."""
+class Main_GGUF_QwenImage_Config(Checkpoint_Config_Base, Main_Config_Base, Config_Base):
+    """Model config for GGUF-quantized Qwen Image transformer models."""
 
-    base: Literal[BaseModelType.QwenImageEdit] = Field(default=BaseModelType.QwenImageEdit)
+    base: Literal[BaseModelType.QwenImage] = Field(default=BaseModelType.QwenImage)
     format: Literal[ModelFormat.GGUFQuantized] = Field(default=ModelFormat.GGUFQuantized)
+    variant: QwenImageVariantType | None = Field(default=None)
 
     @classmethod
     def from_model_on_disk(cls, mod: ModelOnDisk, override_fields: dict[str, Any]) -> Self:
@@ -1258,7 +1279,7 @@ class Main_GGUF_QwenImageEdit_Config(Checkpoint_Config_Base, Main_Config_Base, C
 
         sd = mod.load_state_dict()
 
-        if not _has_qwen_image_edit_keys(sd):
+        if not _has_qwen_image_keys(sd):
             raise NotAMatchError("state dict does not look like a Qwen Image Edit model")
 
         if not _has_ggml_tensors(sd):

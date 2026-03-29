@@ -6,7 +6,7 @@ import torch
 
 from invokeai.backend.model_manager.configs.base import Checkpoint_Config_Base, Diffusers_Config_Base
 from invokeai.backend.model_manager.configs.factory import AnyModelConfig
-from invokeai.backend.model_manager.configs.main import Main_GGUF_QwenImageEdit_Config
+from invokeai.backend.model_manager.configs.main import Main_GGUF_QwenImage_Config
 from invokeai.backend.model_manager.load.load_default import ModelLoader
 from invokeai.backend.model_manager.load.model_loader_registry import ModelLoaderRegistry
 from invokeai.backend.model_manager.load.model_loaders.generic_diffusers import GenericDiffusersLoader
@@ -15,6 +15,7 @@ from invokeai.backend.model_manager.taxonomy import (
     BaseModelType,
     ModelFormat,
     ModelType,
+    QwenImageVariantType,
     SubModelType,
 )
 from invokeai.backend.quantization.gguf.ggml_tensor import GGMLTensor
@@ -22,8 +23,8 @@ from invokeai.backend.quantization.gguf.loaders import gguf_sd_loader
 from invokeai.backend.util.devices import TorchDevice
 
 
-@ModelLoaderRegistry.register(base=BaseModelType.QwenImageEdit, type=ModelType.Main, format=ModelFormat.Diffusers)
-class QwenImageEditDiffusersModel(GenericDiffusersLoader):
+@ModelLoaderRegistry.register(base=BaseModelType.QwenImage, type=ModelType.Main, format=ModelFormat.Diffusers)
+class QwenImageDiffusersModel(GenericDiffusersLoader):
     """Class to load Qwen Image Edit main models."""
 
     def _load_model(
@@ -71,8 +72,8 @@ class QwenImageEditDiffusersModel(GenericDiffusersLoader):
         return result
 
 
-@ModelLoaderRegistry.register(base=BaseModelType.QwenImageEdit, type=ModelType.Main, format=ModelFormat.GGUFQuantized)
-class QwenImageEditGGUFCheckpointModel(ModelLoader):
+@ModelLoaderRegistry.register(base=BaseModelType.QwenImage, type=ModelType.Main, format=ModelFormat.GGUFQuantized)
+class QwenImageGGUFCheckpointModel(ModelLoader):
     """Class to load GGUF-quantized Qwen Image Edit transformer models."""
 
     def _load_model(
@@ -94,8 +95,8 @@ class QwenImageEditGGUFCheckpointModel(ModelLoader):
     def _load_from_singlefile(self, config: AnyModelConfig) -> AnyModel:
         from diffusers import QwenImageTransformer2DModel
 
-        if not isinstance(config, Main_GGUF_QwenImageEdit_Config):
-            raise TypeError(f"Expected Main_GGUF_QwenImageEdit_Config, got {type(config).__name__}.")
+        if not isinstance(config, Main_GGUF_QwenImage_Config):
+            raise TypeError(f"Expected Main_GGUF_QwenImage_Config, got {type(config).__name__}.")
         model_path = Path(config.path)
 
         target_device = TorchDevice.choose_torch_device()
@@ -160,10 +161,13 @@ class QwenImageEditGGUFCheckpointModel(ModelLoader):
             "axes_dims_rope": (16, 56, 56),
         }
 
-        # zero_cond_t was added in diffusers 0.37+; skip it on older versions
+        # zero_cond_t is only used by edit-variant models. It enables dual modulation
+        # for noisy vs reference patches. Setting it on txt2img models produces garbage.
+        # Also requires diffusers 0.37+ (the parameter doesn't exist in older versions).
         import inspect
 
-        if "zero_cond_t" in inspect.signature(QwenImageTransformer2DModel.__init__).parameters:
+        is_edit = getattr(config, "variant", None) == QwenImageVariantType.Edit
+        if is_edit and "zero_cond_t" in inspect.signature(QwenImageTransformer2DModel.__init__).parameters:
             model_config["zero_cond_t"] = True
 
         with accelerate.init_empty_weights():

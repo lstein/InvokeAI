@@ -52,7 +52,7 @@ class BaseModelType(str, Enum):
     """Indicates the model is associated with CogView 4 model architecture."""
     ZImage = "z-image"
     """Indicates the model is associated with Z-Image model architecture, including Z-Image-Turbo."""
-    QwenImageEdit = "qwen-image-edit"
+    QwenImage = "qwen-image"
     """Indicates the model is associated with Qwen Image Edit 2511 model architecture."""
     Unknown = "unknown"
     """Indicates the model's base architecture is unknown."""
@@ -145,6 +145,16 @@ class ZImageVariantType(str, Enum):
     """Z-Image Base - undistilled foundation model with full CFG and negative prompt support."""
 
 
+class QwenImageVariantType(str, Enum):
+    """Qwen Image model variants."""
+
+    Generate = "generate"
+    """Qwen Image - text-to-image generation model."""
+
+    Edit = "edit"
+    """Qwen Image Edit - image editing model with reference image support."""
+
+
 class Qwen3VariantType(str, Enum):
     """Qwen3 text encoder variants based on model size."""
 
@@ -215,8 +225,28 @@ class FluxLoRAFormat(str, Enum):
 
 
 AnyVariant: TypeAlias = Union[
-    ModelVariantType, ClipVariantType, FluxVariantType, Flux2VariantType, ZImageVariantType, Qwen3VariantType
+    ModelVariantType,
+    ClipVariantType,
+    FluxVariantType,
+    Flux2VariantType,
+    ZImageVariantType,
+    QwenImageVariantType,
+    Qwen3VariantType,
 ]
 variant_type_adapter = TypeAdapter[
-    ModelVariantType | ClipVariantType | FluxVariantType | Flux2VariantType | ZImageVariantType | Qwen3VariantType
-](ModelVariantType | ClipVariantType | FluxVariantType | Flux2VariantType | ZImageVariantType | Qwen3VariantType)
+    ModelVariantType
+    | ClipVariantType
+    | FluxVariantType
+    | Flux2VariantType
+    | ZImageVariantType
+    | QwenImageVariantType
+    | Qwen3VariantType
+](
+    ModelVariantType
+    | ClipVariantType
+    | FluxVariantType
+    | Flux2VariantType
+    | ZImageVariantType
+    | QwenImageVariantType
+    | Qwen3VariantType
+)
