@@ -25,7 +25,8 @@
             "rememberMe": "Remember me for 7 days",
             "signIn": "Sign In",
             "signingIn": "Signing in...",
-            "loginFailed": "Login failed. Please check your credentials."
+            "loginFailed": "Login failed. Please check your credentials.",
+            "sessionExpired": "Your credentials have expired. Please log in again to resume."
         },
         "setup": {
             "title": "Welcome to InvokeAI",
@@ -1219,6 +1220,9 @@
         "qwenImageComponentSource": "VAE/Encoder Source (Diffusers)",
         "qwenImageComponentSourcePlaceholder": "Required for GGUF models",
         "qwenImageQuantization": "Encoder Quantization",
+        "qwenImageQuantizationNone": "None (bf16)",
+        "qwenImageQuantizationInt8": "8-bit (int8)",
+        "qwenImageQuantizationNf4": "4-bit (nf4)",
         "qwenImageShift": "Shift Override (e.g. 3 for Lightning)",
         "upcastAttention": "Upcast Attention",
         "uploadImage": "Upload Image",
@@ -2905,6 +2909,8 @@
             "previous": "Previous",
             "next": "Next",
             "saveToGallery": "Save To Gallery",
+            "hideThumbnails": "Hide Thumbnails",
+            "showThumbnails": "Show Thumbnails",
             "showResultsOn": "Showing Results",
             "showResultsOff": "Hiding Results"
         },
