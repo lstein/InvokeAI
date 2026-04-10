@@ -7,6 +7,7 @@ from fastapi import Body, HTTPException, Path
 from fastapi.routing import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 
+from invokeai.app.api.auth_dependencies import CurrentUserOrDefault
 from invokeai.app.api.dependencies import ApiDependencies
 from invokeai.backend.image_util.controlnet_processor import process_controlnet_image
 from invokeai.backend.model_manager.taxonomy import ModelType
@@ -297,6 +298,7 @@ def resolve_ip_adapter_models(ip_adapters: list[IPAdapterRecallParameter]) -> li
     response_model=dict[str, Any],
 )
 async def update_recall_parameters(
+    current_user: CurrentUserOrDefault,
     queue_id: str = Path(..., description="The queue id to perform this operation on"),
     parameters: RecallParameter = Body(..., description="Recall parameters to update"),
 ) -> dict[str, Any]:
@@ -335,14 +337,14 @@ async def update_recall_parameters(
         if not provided_params:
             return {"status": "no_parameters_provided", "updated_count": 0}
 
-        # Store each parameter in client state using a consistent key format
+        # Store each parameter in client state scoped to the current user
         updated_count = 0
         for param_key, param_value in provided_params.items():
             # Convert parameter values to JSON strings for storage
             value_str = json.dumps(param_value)
             try:
                 ApiDependencies.invoker.services.client_state_persistence.set_by_key(
-                    queue_id, f"recall_{param_key}", value_str
+                    current_user.user_id, f"recall_{param_key}", value_str
                 )
                 updated_count += 1
             except Exception as e:
@@ -396,7 +398,9 @@ async def update_recall_parameters(
             logger.info(
                 f"Emitting recall_parameters_updated event for queue {queue_id} with {len(provided_params)} parameters"
             )
-            ApiDependencies.invoker.services.events.emit_recall_parameters_updated(queue_id, provided_params)
+            ApiDependencies.invoker.services.events.emit_recall_parameters_updated(
+                queue_id, current_user.user_id, provided_params
+            )
             logger.info("Successfully emitted recall_parameters_updated event")
         except Exception as e:
             logger.error(f"Error emitting recall parameters event: {e}", exc_info=True)
@@ -425,6 +429,7 @@ async def update_recall_parameters(
     response_model=dict[str, Any],
 )
 async def get_recall_parameters(
+    current_user: CurrentUserOrDefault,
     queue_id: str = Path(..., description="The queue id to retrieve parameters for"),
 ) -> dict[str, Any]:
     """
