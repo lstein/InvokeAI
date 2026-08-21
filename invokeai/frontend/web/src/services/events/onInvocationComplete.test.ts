@@ -804,6 +804,76 @@ describe('onInvocationComplete polymorphic gallery cache', () => {
     }
   });
 
+  it('drops pending refetches when its session is torn down', async () => {
+    // The timers close over an event from *this* session but dispatch into whatever store is
+    // current when they fire, so a logout or account switch inside the retry window would fetch
+    // the old session's output into the new session's caches.
+    vi.useFakeTimers();
+    try {
+      vi.mocked(getImageDTOSafe).mockResolvedValue(null);
+
+      const dispatch = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
+      const getState = vi.fn(() => ({}));
+      const handler = buildOnInvocationComplete(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        getState as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        dispatch as any,
+        new Map()
+      );
+
+      await handler(buildImageCompleteEvent());
+      expect(getImageDTOSafe).toHaveBeenCalledTimes(1);
+
+      handler.cancelScheduledRetries();
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      expect(getImageDTOSafe, 'nothing from the old session fires afterwards').toHaveBeenCalledTimes(1);
+    } finally {
+      vi.mocked(getImageDTOSafe).mockReset();
+      vi.useRealTimers();
+    }
+  });
+
+  it('refreshes board state from the server on a retry instead of counting the output again', async () => {
+    // A retry lands seconds later, by which time a gallery refetch or another delivery may already
+    // have inserted the output. The name-list insert dedupes; the board totals are blind
+    // increments, so re-running them would double-count.
+    vi.mocked(getImageDTOSafe).mockResolvedValueOnce(null);
+
+    const dispatched: unknown[] = [];
+    const dispatch = vi.fn((action: unknown) => {
+      dispatched.push(action);
+      return { unwrap: () => Promise.resolve(undefined) };
+    });
+    const getState = vi.fn(() => ({}));
+    const handler = buildOnInvocationComplete(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      getState as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      dispatch as any,
+      new Map()
+    );
+
+    await handler(buildImageCompleteEvent());
+    const beforeRetry = dispatched.length;
+
+    await handler(buildImageCompleteEvent());
+
+    const retryDispatches = dispatched.slice(beforeRetry);
+    expect(
+      retryDispatches.some((action) => (action as { type?: string }).type === 'mock/boardsApi/upsertQueryEntries'),
+      'no optimistic total bump on a retry'
+    ).toBe(false);
+    expect(
+      retryDispatches.some((action) => {
+        const payload = (action as { payload?: unknown }).payload;
+        return Array.isArray(payload) && payload.some((tag) => (tag as { type?: string })?.type === 'BoardImagesTotal');
+      }),
+      'the board totals are refreshed from the server instead'
+    ).toBe(true);
+  });
+
   it('still processes distinct invocations of the same queue item', async () => {
     const dispatch = vi.fn(() => ({ unwrap: () => Promise.resolve(undefined) }));
     const getState = vi.fn(() => ({}));
