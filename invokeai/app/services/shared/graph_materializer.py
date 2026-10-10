@@ -1583,6 +1583,90 @@ class _ExecutionNodeBuilder:
             if enqueue:
                 self._state._enqueue_if_ready(exec_node_id)
 
+    def _is_closed_branch_iterator(self, iterator_id: str, node_id: str) -> bool:
+        """Return whether an If may be materialized before ``iterator_id`` executes.
+
+        An If needs only its condition to be prepared, but otherwise waits for upstream iterators so it inherits their
+        frames. An iterator inside one of the If's branches waits for the If to select that branch, so waiting for it
+        deadlocks. An iterator cannot change the If's frames when its own frame closes before the If, and every
+        enclosing frame that stays open at the If also reaches it through the condition, which the If already has.
+        """
+
+        if not isinstance(self._state.graph.get_node(node_id), IfInvocation):
+            return False
+        if self._is_iterator_frame_open_at(iterator_id, node_id):
+            return False
+        condition_source_ids = [
+            edge.source.node_id for edge in self._state.graph._get_input_edges(node_id, "condition")
+        ]
+        return all(
+            not self._is_iterator_frame_open_at(enclosing_id, node_id)
+            or any(
+                enclosing_id == condition_source_id
+                or self._is_iterator_frame_open_at(enclosing_id, condition_source_id)
+                for condition_source_id in condition_source_ids
+            )
+            for enclosing_id in nx.ancestors(self._state._get_source_graph_flat(), iterator_id)
+            if isinstance(self._state.graph.get_node(enclosing_id), (ForInvocation, IterateInvocation))
+        )
+
+    def _is_iterator_frame_open_at(self, iterator_id: str, node_id: str) -> bool:
+        """Return whether some path carries ``iterator_id``'s iteration frame into ``node_id``.
+
+        Depth counts frames opened since ``iterator_id``. Per-item outputs of an Iterate or For open one. An item input
+        of a Collect closes one, except a For's final output, which is already in the For's parent frame and which the
+        Collect groups there. A Collect's collection input keeps its source's frame. A Collect that would close
+        ``iterator_id``'s frame counts as leaving it open unless ``iterator_id`` is the item's innermost iterator.
+        """
+
+        pending = [(iterator_id, 0)]
+        seen: set[tuple[str, int]] = set()
+        while pending:
+            current_id, depth = pending.pop()
+            current_node = self._state.graph.get_node(current_id)
+            for edge in self._state.graph._get_output_edges(current_id):
+                if edge.type != "default":
+                    continue
+                is_for_final = (
+                    isinstance(current_node, ForInvocation)
+                    and get_output_field_scope(current_node, edge.source.field) == OutputScope.Final
+                )
+                next_depth = depth
+                if isinstance(current_node, (ForInvocation, IterateInvocation)) and not is_for_final:
+                    next_depth += 1
+                if (
+                    isinstance(self._state.graph.get_node(edge.destination.node_id), CollectInvocation)
+                    and edge.destination.field == ITEM_FIELD
+                    and not is_for_final
+                ):
+                    next_depth -= 1
+                if next_depth <= 0:
+                    if not self._is_innermost_iterator(iterator_id, current_id):
+                        return True
+                    continue
+                if edge.destination.node_id == node_id:
+                    return True
+                state = (edge.destination.node_id, next_depth)
+                if state not in seen:
+                    seen.add(state)
+                    pending.append(state)
+        return False
+
+    def _is_innermost_iterator(self, iterator_id: str, collected_source_id: str) -> bool:
+        """Return whether ``iterator_id`` owns the innermost frame of a value entering a Collect.
+
+        A Collect closes only the innermost frame of its item. A sibling iterator combined into the same value adds a
+        frame the depth count cannot order, so the Collect may close the sibling's frame instead.
+        """
+
+        source_iterators = self.get_node_iterators(collected_source_id)
+        if isinstance(self._state.graph.get_node(collected_source_id), (ForInvocation, IterateInvocation)):
+            source_iterators.append(collected_source_id)
+        source_graph = self._state._get_source_graph_flat()
+        return all(
+            other_id == iterator_id or nx.has_path(source_graph, other_id, iterator_id) for other_id in source_iterators
+        )
+
     def iterator_graph(self, base: Optional["nx.DiGraph"] = None) -> "nx.DiGraph":
         """Gets a DiGraph with edges to collectors removed so an ancestor search produces all active iterators for any node"""
         g = base.copy() if base is not None else self._state._get_source_graph_flat().copy()
@@ -1741,6 +1825,8 @@ class _ExecutionNodeBuilder:
                 and not any(
                     isinstance(self._state.graph.get_node(ancestor_id), (ForInvocation, IterateInvocation))
                     and ancestor_id not in self._state.executed
+                    and not self._state._is_source_inactive(ancestor_id)
+                    and not self._is_closed_branch_iterator(ancestor_id, node_id)
                     for ancestor_id in nx.ancestors(g, node_id)
                 )
             ),

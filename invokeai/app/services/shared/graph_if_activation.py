@@ -78,10 +78,28 @@ class _IfActivationController:
                 ActivationDependency(
                     owner_id=source_if_id,
                     branch=matching_fields[0],
-                    frame=iteration_path,
+                    frame=self._get_owner_frame(source_if_id, iteration_path),
                 )
             )
         return tuple(dependencies)
+
+    def _get_owner_frame(self, if_node_id: str, iteration_path: tuple[int, ...]) -> tuple[int, ...]:
+        """Return the If frame that gates a branch source at ``iteration_path``.
+
+        A Collect between a branch source and its If closes the source's inner frames, so the source runs deeper
+        than the If that admits it. Its gate is the If execution whose frame is the longest prefix of the source's
+        path. Until such an If exists the source's own path is used, which no gate satisfies.
+        """
+
+        owner_frames = {
+            self._state._get_iteration_path(exec_node_id)
+            for exec_node_id in self._state._prepared_registry().get_prepared_ids(if_node_id)
+        }
+        return max(
+            (frame for frame in owner_frames if iteration_path[: len(frame)] == frame),
+            key=len,
+            default=iteration_path,
+        )
 
     def is_source_admitted(self, source_node_id: str, iteration_path: tuple[int, ...] = ()) -> bool:
         dependencies = self.get_source_dependencies(source_node_id, iteration_path)
